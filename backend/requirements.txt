@@ -6,7 +6,6 @@ psycopg2-binary>=2.9,<3
 gunicorn>=23,<24
 python-decouple>=3.8,<4
 celery[redis]>=5.6,<5.7
-paramiko>=5,<6
 requests>=2.33,<3
 openpyxl>=3.1,<4
 Pillow>=12,<13

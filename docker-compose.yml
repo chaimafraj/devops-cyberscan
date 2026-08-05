@@ -31,13 +31,7 @@ x-backend-environment: &backend-environment
   EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
   DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-CyberScan <noreply@localhost>}
   EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-20}
-  SSH_HOST: ${SSH_HOST:-}
-  SSH_PORT: ${SSH_PORT:-22}
-  SSH_USER: ${SSH_USER:-}
-  SSH_PASSWORD: ${SSH_PASSWORD:-}
-  SSH_CONNECT_TIMEOUT: ${SSH_CONNECT_TIMEOUT:-15}
-  SSH_COMMAND_TIMEOUT: ${SSH_COMMAND_TIMEOUT:-60}
-  SSH_AUTO_ADD_HOST_KEY: ${SSH_AUTO_ADD_HOST_KEY:-False}
+  SCANNER_COMMAND_TIMEOUT: ${SCANNER_COMMAND_TIMEOUT:-60}
   NVD_API_KEY: ${NVD_API_KEY:-}
   IP_METADATA_LOOKUP_ENABLED: ${IP_METADATA_LOOKUP_ENABLED:-True}
   IP_METADATA_URL: ${IP_METADATA_URL:-https://ipwho.is/{ip}}
@@ -107,6 +101,9 @@ services:
     volumes:
       - ./backend/media:/app/media
       - huggingface_cache:/home/cyberscan/.cache/huggingface
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - ${DOCKER_GID:-0}
     depends_on:
       backend:
         condition: service_healthy

@@ -38,5 +38,16 @@ volumes Docker persistants.
 `docker compose down -v` supprime aussi les volumes et donc les données de la
 base. Ne l'utilisez que si cette suppression est voulue.
 
-Le backend contacte une machine de scan par SSH. Renseignez `SSH_HOST`,
-`SSH_USER` et `SSH_PASSWORD` dans `.env` si les scans distants sont nécessaires.
+Les commandes `sslscan`, `nmap`, `openssl` et `whatweb` sont exécutées
+directement dans le conteneur `worker`; aucune connexion SSH n'est utilisée.
+
+ZAP est lancé par le Docker du serveur. Avant le démarrage, renseignez
+`DOCKER_GID` dans `.env` avec le groupe du socket Docker :
+
+```bash
+stat -c '%g' /var/run/docker.sock
+```
+
+Le socket `/var/run/docker.sock` donne au worker un contrôle important sur le
+serveur Docker. Ne donnez l'accès à l'application et à son code qu'à des
+utilisateurs de confiance.

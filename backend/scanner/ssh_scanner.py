@@ -1,10 +1,12 @@
-import paramiko
 import requests as req
 import json
 import re
 import shlex
 import os
 import logging
+import signal
+import subprocess
+import tempfile
 import time
 
 from django.conf import settings
@@ -12,31 +14,6 @@ from django.conf import settings
 from .scan_cancellation import ScanCancelled
 
 logger = logging.getLogger(__name__)
-
-def get_ssh_client():
-    missing = [
-        name for name in ('SSH_HOST', 'SSH_USER', 'SSH_PASSWORD')
-        if not str(getattr(settings, name, '') or '').strip()
-    ]
-    if missing:
-        raise RuntimeError(f"Configuration SSH incomplete: {', '.join(missing)}")
-
-    ssh = paramiko.SSHClient()
-    ssh.load_system_host_keys()
-    if settings.SSH_AUTO_ADD_HOST_KEY:
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    else:
-        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
-    ssh.connect(
-        hostname=settings.SSH_HOST,
-        port=settings.SSH_PORT,
-        username=settings.SSH_USER,
-        password=settings.SSH_PASSWORD,
-        timeout=settings.SSH_CONNECT_TIMEOUT,
-        auth_timeout=settings.SSH_CONNECT_TIMEOUT,
-        banner_timeout=settings.SSH_CONNECT_TIMEOUT,
-    )
-    return ssh
 
 
 def parse_target(target):
@@ -74,7 +51,7 @@ def classify_error(output, target):
 
 def run_sslscan(target, port=None, max_attempts=3, cancel_check=None):
     endpoint = f"{target}:{port}" if port else target
-    command_timeout = max(int(settings.SSH_COMMAND_TIMEOUT), 1)
+    command_timeout = max(int(settings.SCANNER_COMMAND_TIMEOUT), 1)
     command = (
         f"timeout --signal=TERM --kill-after=5s {command_timeout}s "
         f"sslscan --ipv4 --timeout=3 --connect-timeout=10 --no-colour "
@@ -84,11 +61,8 @@ def run_sslscan(target, port=None, max_attempts=3, cancel_check=None):
     last_raw = ''
 
     for attempt in range(1, max_attempts + 1):
-        ssh = None
         try:
-            ssh = get_ssh_client()
-            result, err, exit_code = _run_ssh_command(
-                ssh,
+            result, err, exit_code = _run_local_command(
                 command,
                 timeout=command_timeout + 10,
                 cancel_check=cancel_check,
@@ -122,16 +96,10 @@ def run_sslscan(target, port=None, max_attempts=3, cancel_check=None):
                 target, attempt, max_attempts, last_error,
             )
             time.sleep(2 * attempt)
-        except paramiko.AuthenticationException:
-            return {
-                'success': False,
-                'error': 'Erreur SSH: authentification VM échouée',
-                'raw': last_raw,
-            }
         except ScanCancelled:
             raise
         except Exception as exc:
-            last_error = f'Erreur connexion VM: {str(exc)}'
+            last_error = f'Erreur exécution locale: {str(exc)}'
             if attempt == max_attempts:
                 return {'success': False, 'error': last_error, 'raw': last_raw}
             logger.warning(
@@ -139,13 +107,6 @@ def run_sslscan(target, port=None, max_attempts=3, cancel_check=None):
                 target, attempt, max_attempts, last_error,
             )
             time.sleep(2 * attempt)
-        finally:
-            if ssh is not None:
-                try:
-                    ssh.close()
-                except Exception:
-                    pass
-
     return {
         'success': False,
         'error': last_error or 'Aucune réponse du serveur SSL',
@@ -156,19 +117,19 @@ def run_sslscan(target, port=None, max_attempts=3, cancel_check=None):
 def run_nmap(target, port=None):
     scan_port = port or 443
     try:
-        ssh = get_ssh_client()
-        _, stdout, stderr = ssh.exec_command(
-            f"nmap --script ssl-enum-ciphers -p {scan_port} --host-timeout 15s {target}"
+        result, err, _ = _run_local_command(
+            f"nmap --script ssl-enum-ciphers -p {int(scan_port)} --host-timeout 15s "
+            f"{shlex.quote(target)}",
+            timeout=25,
         )
-        result = stdout.read().decode()
-        ssh.close()
+        combined = result + err
 
-        out_lower = result.lower()
+        out_lower = combined.lower()
         if 'host seems down' in out_lower or '0 hosts up' in out_lower:
-            return {'success': False, 'error': f"HÔTE INJOIGNABLE: '{target}' semble injoignable", 'raw': result}
+            return {'success': False, 'error': f"HÔTE INJOIGNABLE: '{target}' semble injoignable", 'raw': combined}
         if 'closed' in out_lower and 'open' not in out_lower:
-            return {'success': False, 'error': f"PORT FERMÉ: {scan_port} fermé sur '{target}'", 'raw': result}
-        return {'success': True, 'error': None, 'raw': result}
+            return {'success': False, 'error': f"PORT FERMÉ: {scan_port} fermé sur '{target}'", 'raw': combined}
+        return {'success': True, 'error': None, 'raw': combined}
     except Exception as e:
         return {'success': False, 'error': str(e), 'raw': ''}
 
@@ -176,12 +137,14 @@ def run_nmap(target, port=None):
 def run_openssl(target, port=None):
     connect_port = port or 443
     try:
-        ssh = get_ssh_client()
-        _, stdout, stderr = ssh.exec_command(
-            f"timeout 10 openssl s_client -connect {target}:{connect_port} -servername {target} </dev/null 2>&1"
+        endpoint = shlex.quote(f'{target}:{int(connect_port)}')
+        server_name = shlex.quote(target)
+        result, err, _ = _run_local_command(
+            f"timeout 10 openssl s_client -connect {endpoint} "
+            f"-servername {server_name} </dev/null",
+            timeout=15,
         )
-        result = stdout.read().decode()
-        ssh.close()
+        result += err
 
         error_type = classify_error(result, target)
         if error_type:
@@ -192,7 +155,7 @@ def run_openssl(target, port=None):
 
 
 def run_whatweb(target, port=None):
-    """Detect web technologies with WhatWeb running on the scanner VM."""
+    """Detect web technologies with WhatWeb installed in the worker image."""
     technologies = {}
 
     try:
@@ -201,28 +164,23 @@ def run_whatweb(target, port=None):
             return {'success': False, 'error': 'Cible WhatWeb vide', 'technologies': []}
 
         # WhatWeb accepts either a URL or a hostname.  Quote it before it is
-        # passed to the remote shell to keep the SSH command safe.
+        # passed to the local shell to keep the command safe.
         host = clean_target if not port else f'{clean_target}:{port}'
         url = clean_target if clean_target.startswith(('http://', 'https://')) else f'https://{host}'
         report_path = f'/tmp/whatweb_{os.getpid()}_{abs(hash(url)) % 100000}.json'
         quoted_report = shlex.quote(report_path)
         command = (
             f'rm -f {quoted_report}; '
-            f'/home/chaima/WhatWeb/whatweb -a 3 --log-json={quoted_report} --no-errors '
+            f'whatweb -a 3 --log-json={quoted_report} --no-errors '
             f'{shlex.quote(url)} >/dev/null; '
             f'status=$?; cat {quoted_report} 2>/dev/null; '
             f'rm -f {quoted_report}; exit $status'
         )
 
-        ssh = get_ssh_client()
-        _, stdout, stderr = ssh.exec_command(command, timeout=120)
-        raw_output = stdout.read().decode(errors='replace')
-        err = stderr.read().decode(errors='replace')
-        exit_status = stdout.channel.recv_exit_status()
-        ssh.close()
+        raw_output, err, exit_status = _run_local_command(command, timeout=120)
 
         if 'not found' in err.lower() or 'command not found' in err.lower():
-            return {'success': False, 'error': 'WhatWeb non installe sur la VM', 'technologies': []}
+            return {'success': False, 'error': 'WhatWeb non installé dans le worker', 'technologies': []}
 
         # --log-json=- outputs JSON records.  Ignore banners or other lines
         # that are not valid JSON, as requested.
@@ -366,10 +324,9 @@ def run_nuclei(target, port=None):
         host = clean_target if not port else f'{clean_target}:{port}'
         url = clean_target if clean_target.startswith('http') else f'https://{host}'
         quoted_url = shlex.quote(url)
-        ssh = get_ssh_client()
 
         # Run only the HTTP templates needed by this application.  This keeps
-        # the scan within the remote timeout instead of running every locally
+        # the scan within the process timeout instead of running every locally
         # installed Nuclei template.
         base_command = (
             f"timeout 90s nuclei -u {quoted_url} -silent -timeout 5 -no-color "
@@ -377,22 +334,20 @@ def run_nuclei(target, port=None):
             f"-severity critical,high,medium -rate-limit 100 -c 25"
         )
 
-        _, stdout, stderr = ssh.exec_command(f"{base_command} -jsonl", timeout=110)
-        raw_output = stdout.read().decode()
-        err = stderr.read().decode()
-        exit_status = stdout.channel.recv_exit_status()
+        raw_output, err, exit_status = _run_local_command(
+            f"{base_command} -jsonl",
+            timeout=110,
+        )
 
         if 'flag provided but not defined' in err.lower() and 'jsonl' in err.lower():
-            _, stdout, stderr = ssh.exec_command(f"{base_command} -json", timeout=110)
-            raw_output = stdout.read().decode()
-            err = stderr.read().decode()
-            exit_status = stdout.channel.recv_exit_status()
-
-        ssh.close()
+            raw_output, err, exit_status = _run_local_command(
+                f"{base_command} -json",
+                timeout=110,
+            )
 
         combined_output = '\n'.join(part for part in (raw_output, err) if part)
         if 'not found' in err.lower() or 'command not found' in err.lower():
-            return {'success': False, 'error': 'Nuclei non installe sur le VM', 'findings': [], 'raw': err}
+            return {'success': False, 'error': 'Nuclei non installé dans le worker', 'findings': [], 'raw': err}
 
         # Nuclei normally writes findings to stdout, but collecting both
         # streams preserves findings from wrappers or older installations.
@@ -415,19 +370,41 @@ def run_nuclei(target, port=None):
 
         return {'success': True, 'findings': findings, 'raw': combined_output}
     except Exception as e:
-        # socket.timeout and a few Paramiko exceptions stringify to an empty
-        # string.  Returning the class name makes the failure actionable.
+        # Some process errors stringify to an empty string. Returning the
+        # class name makes the failure actionable.
         error = str(e).strip() or e.__class__.__name__
         return {'success': False, 'error': f'Erreur execution Nuclei: {error}', 'findings': [], 'raw': ''}
 
 
-def _run_ssh_command(ssh, command, timeout=None, cancel_check=None, on_cancel=None):
-    """Exécute une commande SSH en drainant ses deux flux sans interblocage."""
-    _, stdout, _ = ssh.exec_command(command, timeout=timeout)
-    channel = stdout.channel
+def _terminate_process(process):
+    """Stop a shell command and any scanner process started by that shell."""
+    if process.poll() is not None:
+        return
+
+    try:
+        if os.name == 'posix':
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            process.terminate()
+        process.wait(timeout=5)
+    except (ProcessLookupError, subprocess.TimeoutExpired):
+        if process.poll() is None:
+            if os.name == 'posix':
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+
+
+def _run_local_command(command, timeout=None, cancel_check=None, on_cancel=None):
+    """Run a command in the worker container with timeout and cancellation."""
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=(os.name == 'posix'),
+    )
     deadline = time.monotonic() + float(timeout) if timeout is not None else None
-    stdout_chunks = []
-    stderr_chunks = []
 
     while True:
         if cancel_check is not None and cancel_check():
@@ -435,57 +412,37 @@ def _run_ssh_command(ssh, command, timeout=None, cancel_check=None, on_cancel=No
                 if on_cancel is not None:
                     on_cancel()
             finally:
-                channel.close()
-            raise ScanCancelled('Commande SSH interrompue par annulation du scan')
-
-        received_data = False
-
-        while channel.recv_ready():
-            chunk = channel.recv(64 * 1024)
-            if not chunk:
-                break
-            stdout_chunks.append(chunk)
-            received_data = True
-
-        while channel.recv_stderr_ready():
-            chunk = channel.recv_stderr(64 * 1024)
-            if not chunk:
-                break
-            stderr_chunks.append(chunk)
-            received_data = True
-
-        if channel.exit_status_ready():
-            if not channel.recv_ready() and not channel.recv_stderr_ready():
-                break
+                _terminate_process(process)
+            raise ScanCancelled('Commande locale interrompue par annulation du scan')
 
         if deadline is not None and time.monotonic() >= deadline:
-            channel.close()
-            raise TimeoutError(f'Commande SSH expirée après {timeout} secondes')
+            _terminate_process(process)
+            process.communicate()
+            raise TimeoutError(f'Commande locale expirée après {timeout} secondes')
 
-        if not received_data:
-            time.sleep(0.05)
+        communicate_timeout = 0.1
+        if deadline is not None:
+            communicate_timeout = min(communicate_timeout, max(deadline - time.monotonic(), 0.001))
+        try:
+            out, err = process.communicate(timeout=communicate_timeout)
+            return (
+                out.decode(errors='replace'),
+                err.decode(errors='replace'),
+                process.returncode,
+            )
+        except subprocess.TimeoutExpired:
+            continue
 
-    exit_code = channel.recv_exit_status()
-    out = b''.join(stdout_chunks).decode(errors='replace')
-    err = b''.join(stderr_chunks).decode(errors='replace')
-    return out, err, exit_code
 
-
-def _stop_remote_container(container_name):
-    cleanup_ssh = None
+def _stop_local_container(container_name):
     try:
-        cleanup_ssh = get_ssh_client()
         quoted_name = shlex.quote(container_name)
-        _run_ssh_command(
-            cleanup_ssh,
+        _run_local_command(
             f'docker rm -f {quoted_name} >/dev/null 2>&1 || true',
             timeout=20,
         )
     except Exception:
         logger.warning('ZAP: arrêt du conteneur %s impossible', container_name, exc_info=True)
-    finally:
-        if cleanup_ssh is not None:
-            cleanup_ssh.close()
 
 
 def _strip_html(text):
@@ -501,7 +458,7 @@ ZAP_IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
 
 
 def run_zap(target, timeout=600, port=None, cancel_check=None):
-    """Scan web passif avec OWASP ZAP (zap-baseline.py) via Docker sur la VM.
+    """Scan web passif avec OWASP ZAP via le Docker local du serveur.
 
     Le scan baseline lance un spider puis un scan passif, puis exporte un
     rapport JSON. On lit ce rapport et on renvoie les alertes normalisées.
@@ -509,7 +466,8 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
     Retour: {'success', 'findings', 'raw', 'error'}
     findings = [{'name', 'risk', 'url', 'description', 'solution', 'count'}]
     """
-    ssh = None
+    container_name = None
+    report_path = None
     try:
         clean_target = target.strip()
         if not clean_target:
@@ -521,20 +479,25 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
         job_id = getattr(cancel_check, 'scan_id', None) or f'{os.getpid()}-{abs(hash(clean_target)) % 100000}'
         container_name = f'cyberscan-zap-{job_id}'
 
-        ssh = get_ssh_client()
-
-        # 1) Vérifier que Docker est disponible sur la VM.
-        _, _, docker_code = _run_ssh_command(ssh, "command -v docker", timeout=15)
+        # 1) Vérifier le client Docker et l'accès au daemon du serveur.
+        _, docker_error, docker_code = _run_local_command(
+            "command -v docker >/dev/null && docker version --format '{{.Server.Version}}'",
+            timeout=15,
+        )
         if docker_code != 0:
-            logger.error("ZAP: Docker non installé sur la VM %s", settings.SSH_HOST)
-            return {'success': False, 'error': 'Docker non installé sur la VM', 'findings': [], 'raw': ''}
+            logger.error("ZAP: Docker local indisponible: %s", docker_error[:800])
+            return {
+                'success': False,
+                'error': 'Docker local indisponible dans le worker (vérifier /var/run/docker.sock)',
+                'findings': [],
+                'raw': docker_error,
+            }
 
-        # 2) Préparer un dossier de rapport ACCESSIBLE EN ÉCRITURE par
-        #    l'utilisateur "zap" (uid 1000) du conteneur. chmod 777 corrige
-        #    l'erreur silencieuse "Permission denied" à l'écriture du rapport.
-        report_dir = "/tmp/zap-reports"
+        # 2) Le rapport reste dans le conteneur ZAP puis `docker cp` le copie
+        #    dans le worker. Cela évite les problèmes de bind mounts lorsque
+        #    le client Docker est lui-même exécuté dans un conteneur.
         report_name = f"zap_{os.getpid()}_{abs(hash(clean_target)) % 100000}.json"
-        _run_ssh_command(ssh, f"mkdir -p {report_dir} && chmod 777 {report_dir}", timeout=30)
+        report_path = os.path.join(tempfile.gettempdir(), report_name)
 
         # 3) Pré-télécharger l'image : le PREMIER pull (~1 Go) dépasse souvent
         #    le timeout du scan lui-même et faisait échouer run_zap silencieusement.
@@ -545,8 +508,10 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
             f"docker image inspect {image} >/dev/null 2>&1 || "
             f"timeout {pull_timeout}s docker pull --quiet {image}"
         )
-        _, pull_error, pull_code = _run_ssh_command(
-            ssh, pull_command, timeout=pull_timeout + 15, cancel_check=cancel_check
+        _, pull_error, pull_code = _run_local_command(
+            pull_command,
+            timeout=pull_timeout + 15,
+            cancel_check=cancel_check,
         )
         if pull_code != 0:
             return {
@@ -559,32 +524,41 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
         # 4) Lancer le scan baseline.
         #    -I : ne pas retourner un code d'échec sur les warnings
         #    -m 2 : 2 min de spider max (borne la durée)
-        #    -J : rapport JSON écrit dans /zap/wrk/ (monté sur report_dir)
+        #    -J : rapport JSON écrit dans /zap/wrk/ dans le conteneur ZAP
         logger.info("ZAP: démarrage du scan baseline sur %s", url)
         scan_cmd = (
-            f"docker run --rm --name {shlex.quote(container_name)} "
-            f"-v {report_dir}:/zap/wrk/:rw {ZAP_IMAGE} "
+            f"docker run --name {shlex.quote(container_name)} {ZAP_IMAGE} "
             f"zap-baseline.py -t {quoted_url} -I -m 2 -J {report_name}"
         )
-        out, err, exit_code = _run_ssh_command(
-            ssh,
+        out, err, exit_code = _run_local_command(
             scan_cmd,
             timeout=timeout,
             cancel_check=cancel_check,
-            on_cancel=lambda: _stop_remote_container(container_name),
+            on_cancel=lambda: _stop_local_container(container_name),
         )
         # zap-baseline.py renvoie 0/1/2 selon les alertes ; on se fie au rapport
         # JSON plutôt qu'au code de sortie.
         logger.info("ZAP: scan terminé (exit=%s)", exit_code)
 
-        # 5) Récupérer le rapport JSON, puis nettoyer.
-        raw_output, cat_err, cat_code = _run_ssh_command(
-            ssh, f"cat {report_dir}/{report_name}", timeout=30
+        # 5) Copier le rapport du conteneur arrêté vers le worker.
+        _, copy_error, copy_code = _run_local_command(
+            f"docker cp {shlex.quote(container_name)}:/zap/wrk/{shlex.quote(report_name)} "
+            f"{shlex.quote(report_path)}",
+            timeout=30,
         )
-        _run_ssh_command(ssh, f"rm -f {report_dir}/{report_name}", timeout=15)
 
-        if cat_code != 0 or not raw_output.strip():
-            logger.error("ZAP: rapport introuvable/vide. stderr scan=%s", (err or cat_err)[:800])
+        if copy_code != 0 or not os.path.isfile(report_path):
+            logger.error("ZAP: rapport introuvable. stderr scan=%s", (err or copy_error)[:800])
+            return {
+                'success': False,
+                'error': 'Rapport ZAP introuvable ou vide (voir logs Django)',
+                'findings': [],
+                'raw': out or err,
+            }
+
+        with open(report_path, encoding='utf-8') as report_file:
+            raw_output = report_file.read()
+        if not raw_output.strip():
             return {
                 'success': False,
                 'error': 'Rapport ZAP introuvable ou vide (voir logs Django)',
@@ -623,8 +597,10 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
         logger.exception("ZAP: erreur d'exécution sur %s", target)
         return {'success': False, 'error': f'Erreur exécution ZAP: {error}', 'findings': [], 'raw': ''}
     finally:
-        if ssh is not None:
+        if container_name is not None:
+            _stop_local_container(container_name)
+        if report_path is not None:
             try:
-                ssh.close()
-            except Exception:
+                os.remove(report_path)
+            except FileNotFoundError:
                 pass

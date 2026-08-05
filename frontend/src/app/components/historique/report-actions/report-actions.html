@@ -1,0 +1,6 @@
+<div class="report-actions">
+<button type="button" class="action-btn pdf-btn" [disabled]="scan.pdfGenerating || scan.pdfDownloading" (click)="emit(pdf, $event)">PDF</button>
+<button type="button" class="action-btn email-btn" [disabled]="scan.emailSending" (click)="emit(email, $event)">EMAIL</button>
+<button type="button" class="action-btn export-btn" (click)="emit(excel, $event)">XLSX</button>
+<button type="button" class="action-btn export-btn" (click)="emit(json, $event)">JSON</button>
+</div>

@@ -1,0 +1,51 @@
+<div class="login-page">
+  <canvas id="login-matrix"></canvas>
+  <div class="scanline"></div>
+
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo">CYBER<span>SCAN</span></div>
+      <div class="logo-sub">PLATEFORME DE SÉCURITÉ SSL/TLS</div>
+    </div>
+
+    <div class="login-box">
+      <div class="box-title">[ AUTHENTIFICATION ]</div>
+
+      <div class="input-group">
+        <label>UTILISATEUR</label>
+        <input
+          class="cyber-input"
+          type="text"
+          [(ngModel)]="username"
+          placeholder="Entrez votre nom d'utilisateur"
+          (keyup.enter)="login()"
+        />
+      </div>
+
+      <div class="input-group">
+        <label>MOT DE PASSE</label>
+        <input
+          class="cyber-input"
+          type="password"
+          [(ngModel)]="password"
+          placeholder="Entrez votre mot de passe"
+          (keyup.enter)="login()"
+        />
+      </div>
+
+      <div class="error-msg" *ngIf="errorMsg">
+        ⚠ {{ errorMsg }}
+      </div>
+
+      <button class="login-btn" (click)="login()" [disabled]="loading">
+        {{ loading ? '⏳ CONNEXION...' : '▶ SE CONNECTER' }}
+      </button>
+
+      <div class="terminal-status">
+        <div class="terminal-line cmd">&gt; Système de sécurité actif</div>
+        <div class="terminal-line ok">[✓] Connexion chiffrée SSL/TLS</div>
+        <div class="terminal-line"><span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</div>

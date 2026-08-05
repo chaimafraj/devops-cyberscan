@@ -1,0 +1,45 @@
+<div class="profile-container">
+  <h1>[ MON PROFIL ]</h1>
+
+  <div class="profile-card" *ngIf="user">
+    <div class="info-row">
+      <span class="label">UTILISATEUR</span>
+      <span class="value">{{ user.username }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">EMAIL</span>
+      <span class="value">{{ user.email }}</span>
+    </div>
+    <div class="info-row">
+      <span class="label">RÔLE</span>
+      <span class="value badge">{{ roleLabel(user.role) }}</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" (click)="togglePasswordForm()">
+        🔑 Modifier mot de passe
+      </button>
+      <button class="btn-danger" (click)="logout()">
+        ⏻ Déconnexion
+      </button>
+    </div>
+
+    <div class="password-form" *ngIf="showPasswordForm">
+      <p *ngIf="message" class="success">{{ message }}</p>
+      <p *ngIf="error" class="error">{{ error }}</p>
+
+      <label>Ancien mot de passe</label>
+      <input type="password" [(ngModel)]="oldPassword" />
+
+      <label>Nouveau mot de passe</label>
+      <input type="password" [(ngModel)]="newPassword" />
+
+      <label>Confirmer nouveau mot de passe</label>
+      <input type="password" [(ngModel)]="confirmPassword" />
+
+      <button class="btn-primary" (click)="changePassword()" [disabled]="loading">
+        ▶ {{ loading ? 'Chargement...' : 'Valider' }}
+      </button>
+    </div>
+  </div>
+</div>

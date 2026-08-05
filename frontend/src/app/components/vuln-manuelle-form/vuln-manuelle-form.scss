@@ -1,0 +1,97 @@
+.vuln-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.vuln-modal-box {
+  background: #001a00;
+  border: 1px solid #00ff41;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: #00ff41;
+  font-family: monospace;
+}
+
+.vuln-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+  font-weight: bold;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #00ff41;
+  cursor: pointer;
+  font-size: 1.2em;
+}
+
+.vuln-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+label {
+  margin-top: 10px;
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+input, select, textarea {
+  padding: 8px;
+  background: #000;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: monospace;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.col {
+  flex: 1;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-primary, .btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  cursor: pointer;
+  font-family: monospace;
+}
+
+.btn-secondary {
+  border-color: #888;
+  color: #888;
+}
+
+.error {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid #ff4444;
+  padding: 8px;
+}

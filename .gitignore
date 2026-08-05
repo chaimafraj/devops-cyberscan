@@ -1,0 +1,15 @@
+.env
+.idea/
+**/.idea/
+**/__pycache__/
+*.py[cod]
+*.log
+
+backend/media/
+backend/artifacts/
+backend/staticfiles/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/

@@ -1,0 +1,132 @@
+<div class="alertes-page">
+  <canvas id="alertes-matrix"></canvas>
+  <div class="scanline"></div>
+
+  <main class="alertes-content">
+    <div class="page-header">
+      <h2 class="page-title">[ SYSTÈME D'ALERTES ]</h2>
+      <p class="page-sub">Notifications de sécurité en temps réel</p>
+    </div>
+
+    <div class="alertes-stats">
+      <div class="alerte-stat danger">
+        <div class="stat-num">@if (loading) { <span class="stat-skeleton" aria-label="Chargement"></span> } @else { {{ stats.critiques }} }</div>
+        <div class="stat-label">CRITIQUES</div>
+      </div>
+      <div class="alerte-stat warn">
+        <div class="stat-num">@if (loading) { <span class="stat-skeleton" aria-label="Chargement"></span> } @else { {{ stats.moyennes }} }</div>
+        <div class="stat-label">MOYENNES</div>
+      </div>
+      <div class="alerte-stat ok">
+        <div class="stat-num">@if (loading) { <span class="stat-skeleton" aria-label="Chargement"></span> } @else { {{ stats.faibles }} }</div>
+        <div class="stat-label">FAIBLES</div>
+      </div>
+      <div class="alerte-stat">
+        <div class="stat-num">@if (loading) { <span class="stat-skeleton" aria-label="Chargement"></span> } @else { {{ stats.total }} }</div>
+        <div class="stat-label">TOTAL</div>
+      </div>
+    </div>
+
+    @if (loadError) {
+      <div class="alertes-state error" role="alert">
+        Impossible de charger les alertes.
+        <button type="button" (click)="loadAlertes()">RÉESSAYER</button>
+      </div>
+    } @else if (!loading && alertes.length === 0) {
+      <div class="alertes-state">Aucune alerte de sécurité disponible.</div>
+    }
+
+    <div class="alertes-list" aria-live="polite">
+      <button
+        type="button"
+        class="alerte-item"
+        *ngFor="let alerte of alertes"
+        [ngClass]="alerte.type"
+        (click)="openDetails(alerte)"
+        [attr.aria-label]="'Afficher les détails de ' + alerte.titre"
+      >
+        <span class="alerte-icon" aria-hidden="true">{{ alerte.icon }}</span>
+        <span class="alerte-info">
+          <span class="alerte-title">{{ alerte.titre }}</span>
+          <span class="alerte-msg">{{ alerte.message }}</span>
+          <span class="alerte-date">{{ alerte.date | date:'dd/MM/yyyy à HH:mm' }}</span>
+        </span>
+        <span class="alerte-badge" [ngClass]="alerte.type">{{ alerte.niveau }}</span>
+        <span class="details-hint" aria-hidden="true">DÉTAILS ›</span>
+      </button>
+    </div>
+  </main>
+
+  @if (selectedAlerte; as alerte) {
+    <div class="alerte-modal-backdrop" (click)="closeDetails()">
+      <section
+        class="alerte-modal"
+        [ngClass]="alerte.type"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alerte-modal-title"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="modal-header">
+          <span class="modal-icon" aria-hidden="true">{{ alerte.icon }}</span>
+          <div>
+            <div class="modal-kicker">DÉTAIL DE L'ALERTE</div>
+            <h3 id="alerte-modal-title">{{ alerte.titre }}</h3>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            aria-label="Fermer les détails"
+            (click)="closeDetails()"
+          >×</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="modal-meta">
+            <span class="alerte-badge" [ngClass]="alerte.type">{{ alerte.niveau }}</span>
+            <span>SCAN #{{ alerte.scan_id }}</span>
+            <span>{{ alerte.domain }}</span>
+            <span>{{ alerte.date | date:'dd/MM/yyyy à HH:mm' }}</span>
+          </div>
+
+          <div class="detail-grid">
+            <div class="detail-row">
+              <span class="detail-label">Source</span>
+              <span>{{ alerte.details?.source_label || alerte.source }}</span>
+            </div>
+            @if (alerte.details?.identifier) {
+              <div class="detail-row">
+                <span class="detail-label">Identifiant</span>
+                <span>{{ alerte.details?.identifier }}</span>
+              </div>
+            }
+            <div class="detail-row" *ngFor="let field of alerte.details?.fields">
+              <span class="detail-label">{{ field.label }}</span>
+              @if (field.url) {
+                <a [href]="field.url" target="_blank" rel="noopener noreferrer">{{ field.value }}</a>
+              } @else {
+                <span>{{ field.value }}</span>
+              }
+            </div>
+          </div>
+
+          <section class="detail-section">
+            <h4>Description</h4>
+            <p>{{ alerte.message || 'Aucune description supplémentaire.' }}</p>
+          </section>
+
+          @if (alerte.details?.recommendation) {
+            <section class="detail-section recommendation">
+              <h4>Recommandation</h4>
+              <p>{{ alerte.details?.recommendation }}</p>
+            </section>
+          }
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" (click)="closeDetails()">FERMER</button>
+        </footer>
+      </section>
+    </div>
+  }
+</div>

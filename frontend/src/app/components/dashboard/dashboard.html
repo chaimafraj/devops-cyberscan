@@ -1,0 +1,101 @@
+<div class="dashboard">
+  <canvas id="matrix-canvas"></canvas>
+  <div class="scanline"></div>
+
+  <div class="dashboard-content">
+
+    <div class="page-header">
+      <div class="glitch" data-text="CYBERSCAN">CYBERSCAN</div>
+      <div class="subtitle">&gt;&gt; PLATEFORME INTELLIGENTE DE DÉTECTION CVE &lt;&lt;</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card danger">
+        <div class="stat-num">
+          @if (loadingStats) { <span class="stat-skeleton" aria-label="Chargement"></span> }
+          @else { {{ critiques }} }
+        </div>
+        <div class="stat-label">CRITIQUES</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="stat-num">
+          @if (loadingStats) { <span class="stat-skeleton" aria-label="Chargement"></span> }
+          @else { {{ moyennes }} }
+        </div>
+        <div class="stat-label">MOYENNES</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">
+          @if (loadingStats) { <span class="stat-skeleton" aria-label="Chargement"></span> }
+          @else { {{ totalScans }} }
+        </div>
+        <div class="stat-label">SCANS TOTAL</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">
+          @if (loadingStats) { <span class="stat-skeleton" aria-label="Chargement"></span> }
+          @else { {{ totalCve }} }
+        </div>
+        <div class="stat-label">CVE DÉTECTÉS</div>
+      </div>
+    </div>
+
+    <div class="recent-scans">
+      <div class="card-title">▸ DERNIERS SCANS</div>
+      <div class="scan-item" *ngFor="let scan of recentScans">
+        <span class="domain">{{ scan.domaine }}</span>
+        <span class="date">{{ scan.date_scan | date:'dd/MM/yyyy HH:mm' }}</span>
+        <span class="score"
+              [class.danger-text]="scan.score_risque_ia >= 7"
+              [class.warn-text]="scan.score_risque_ia >= 4 && scan.score_risque_ia < 7"
+              [class.ok-text]="scan.score_risque_ia < 4">
+          {{ scan.score_risque_ia }}/10
+        </span>
+        <span class="badge-danger" *ngIf="scan.score_risque_ia >= 7">CRITIQUE</span>
+        <span class="badge-warn" *ngIf="scan.score_risque_ia >= 4 && scan.score_risque_ia < 7">MOYEN</span>
+        <span class="badge-ok" *ngIf="scan.score_risque_ia < 4">FAIBLE</span>
+      </div>
+      <div class="no-scans" *ngIf="recentScans.length === 0">
+        <span class="stat-label">Aucun scan effectué — allez sur la page SCANNER</span>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <div class="card-title">▸ ACTIONS RAPIDES</div>
+      <div class="actions-grid">
+        <a routerLink="/scanner" class="action-card">
+          <div class="action-icon">⚡</div>
+          <div class="action-label">NOUVEAU SCAN</div>
+        </a>
+        <a routerLink="/historique" class="action-card">
+          <div class="action-icon">📋</div>
+          <div class="action-label">HISTORIQUE</div>
+        </a>
+        <a routerLink="/alertes" class="action-card">
+          <div class="action-icon">🔔</div>
+          <div class="action-label">ALERTES</div>
+        </a>
+
+        <a *ngIf="userRole === 'Admin'" routerLink="/admin-settings" class="action-card admin-only" style="border-color: #dc3545;">
+          <div class="action-icon" style="color: #dc3545;">⚙️</div>
+          <div class="action-label" style="color: #dc3545;">CONFIG ADMIN</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-header">▸ SYSTEM STATUS</div>
+      <div class="terminal-line ok">[✓] Django Backend — http://127.0.0.1:8000</div>
+      <div class="terminal-line ok">[✓] PostgreSQL — cyberapp_db connectée</div>
+      <div class="terminal-line ok">[✓] VM Debian SSH — 192.168.11.131</div>
+      <div class="terminal-line cmd">[►] {{ totalScans }} scans enregistrés</div>
+
+      <div class="terminal-line warn" *ngIf="userRole === 'Admin'" style="color: #ffc107;">
+        [!] Mode Privilégié : Session Administrateur Active.
+      </div>
+
+      <div class="terminal-line"><span class="cursor"></span></div>
+    </div>
+
+  </div>
+</div>

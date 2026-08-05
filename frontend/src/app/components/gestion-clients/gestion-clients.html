@@ -1,0 +1,78 @@
+<div class="clients-container">
+  <div class="header-row">
+    <h1>[ GESTION DES CLIENTS ]</h1>
+    <button class="btn-primary" (click)="toggleAddForm()">
+      {{ showAddForm ? '✕ Annuler' : '+ Ajouter un client' }}
+    </button>
+  </div>
+
+  <p *ngIf="successMessage" class="success">{{ successMessage }}</p>
+  <p *ngIf="error" class="error">{{ error }}</p>
+
+  <div class="add-form" *ngIf="showAddForm">
+    <p *ngIf="addError" class="error">{{ addError }}</p>
+
+    <label>Nom du client</label>
+    <input type="text" [(ngModel)]="newNom" placeholder="Ex: Société ABC" />
+
+    <label>Nom d'utilisateur (login)</label>
+    <input type="text" [(ngModel)]="newUsername" placeholder="Ex: societeabc" />
+
+    <label>Email</label>
+    <input type="email" [(ngModel)]="newEmail" placeholder="contact@societe.com" />
+
+    <button class="btn-primary" (click)="createClient()" [disabled]="addLoading">
+      {{ addLoading ? 'Création...' : '▶ Créer et envoyer les identifiants' }}
+    </button>
+  </div>
+
+  <div class="table-wrapper" *ngIf="!loading; else loadingBlock">
+    <table class="clients-table" *ngIf="clients.length > 0; else emptyBlock">
+      <thead>
+      <tr>
+        <th>NOM</th>
+        <th>EMAIL</th>
+        <th>SITES</th>
+        <th>STATUT</th>
+        <th>1ère CONNEXION</th>
+        <th>DATE CRÉATION</th>
+        <th>ACTIONS</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let client of clients">
+        <td>{{ client.nom }}</td>
+        <td>{{ client.email }}</td>
+        <td class="center">{{ client.nb_sites }}</td>
+        <td>
+            <span class="badge" [class.badge-green]="client.is_active" [class.badge-red]="!client.is_active">
+              {{ client.is_active ? 'ACTIF' : 'INACTIF' }}
+            </span>
+        </td>
+        <td class="center">
+          <span *ngIf="client.must_change_password" class="badge badge-orange">EN ATTENTE</span>
+          <span *ngIf="!client.must_change_password" class="badge badge-green">FAIT</span>
+        </td>
+        <td>{{ client.date_creation | date: 'dd/MM/yyyy HH:mm' }}</td>
+        <td>
+          <button class="btn-danger-sm" (click)="deleteClient(client)">🗑 Supprimer</button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+
+    <ng-template #emptyBlock>
+      <p class="empty-msg">Aucun client enregistré.</p>
+    </ng-template>
+
+    <div class="pagination">
+      <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹ Précédent</button>
+      <span>Page {{ currentPage }} / {{ totalPages }} ({{ totalCount }} clients)</span>
+      <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">Suivant ›</button>
+    </div>
+  </div>
+
+  <ng-template #loadingBlock>
+    <p class="loading-msg">Chargement...</p>
+  </ng-template>
+</div>

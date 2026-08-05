@@ -1,0 +1,189 @@
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #00FF41;
+  font-family: 'Share Tech Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#login-matrix {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.scanline {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,255,65,0.015) 2px, rgba(0,255,65,0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.login-container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 440px;
+  padding: 20px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  color: #00FF41;
+  text-shadow: 0 0 20px #00FF4166;
+  letter-spacing: 4px;
+}
+
+.logo span {
+  color: #ffffff;
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: #00FF4155;
+  letter-spacing: 3px;
+  margin-top: 8px;
+}
+
+.login-box {
+  border: 1px solid #00FF4133;
+  background: #0d1a0d;
+  padding: 28px;
+  position: relative;
+}
+
+.login-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, #00FF41, transparent);
+  animation: scan-line 3s infinite;
+}
+
+@keyframes scan-line {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.box-title {
+  font-size: 10px;
+  color: #00FF4188;
+  letter-spacing: 3px;
+  border-bottom: 1px solid #00FF4122;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  font-size: 9px;
+  color: #00FF4166;
+  letter-spacing: 2px;
+}
+
+.cyber-input {
+  background: #000;
+  border: 1px solid #00FF4144;
+  color: #00FF41;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cyber-input:focus {
+  border-color: #00FF41;
+  box-shadow: 0 0 8px #00FF4122;
+}
+
+.cyber-input::placeholder {
+  color: #00FF4133;
+}
+
+.error-msg {
+  color: #ff4444;
+  font-size: 11px;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.login-btn {
+  width: 100%;
+  background: #00FF4115;
+  border: 1px solid #00FF41;
+  color: #00FF41;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  padding: 14px;
+  cursor: pointer;
+  letter-spacing: 3px;
+  transition: all 0.2s;
+  margin-bottom: 20px;
+}
+
+.login-btn:hover {
+  background: #00FF4130;
+  box-shadow: 0 0 16px #00FF4155;
+}
+
+.login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-status {
+  border-top: 1px solid #00FF4122;
+  padding-top: 12px;
+}
+
+.terminal-line {
+  font-size: 11px;
+  line-height: 2;
+  color: #00FF41;
+}
+
+.terminal-line.cmd { color: #00d4ff; }
+.terminal-line.ok  { color: #00FF41; }
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  background: #00FF41;
+  animation: blink 0.7s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

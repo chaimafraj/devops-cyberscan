@@ -1,0 +1,7 @@
+<div class="mb-3" *ngIf="!isLoginMode">
+  <label class="form-label fw-bold">Rôle de l'utilisateur :</label>
+  <select class="form-select" [(ngModel)]="selectedRole" name="role">
+    <option value="User">User (Lecture seule / Scan basique)</option>
+    <option value="Admin">Admin (Contrôle Total / Supprimer)</option>
+  </select>
+</div>

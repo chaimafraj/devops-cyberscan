@@ -1,0 +1,117 @@
+<nav class="navbar">
+  <canvas id="matrix-bg"></canvas>
+  <div class="scanline"></div>
+
+  <div class="nav-content">
+    <div class="logo">CYBER<span>SCAN</span></div>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      aria-label="Ouvrir le menu de navigation"
+      aria-controls="primary-navigation"
+      [attr.aria-expanded]="isMenuOpen"
+      (click)="toggleMenu()"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul id="primary-navigation" class="nav-links" [class.is-open]="isMenuOpen">
+      <li><a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">DASHBOARD</a></li>
+      <li><a routerLink="/scanner" routerLinkActive="active" (click)="closeMenu()">SCANNER</a></li>
+      <li><a routerLink="/historique" routerLinkActive="active" (click)="closeMenu()">HISTORIQUE</a></li>
+      <li><a routerLink="/alertes" routerLinkActive="active" (click)="closeMenu()">ALERTES</a></li>
+      <li *ngIf="currentUser?.role === 'admin'">
+        <a routerLink="/clients" routerLinkActive="active" (click)="closeMenu()">CLIENTS</a>
+      </li>
+    </ul>
+
+    <div class="nav-right">
+      <button class="theme-toggle" type="button" (click)="toggleTheme()">
+        {{ isDark ? '☀ LIGHT' : '☾ DARK' }}
+      </button>
+
+      <div class="user-info" *ngIf="currentUser">
+        <a routerLink="/profile" class="user-name" title="Voir mon profil">
+          <svg class="user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          {{ currentUser.username }}
+        </a>
+        <div class="notification-center">
+          <button
+            class="notif-bell"
+            type="button"
+            title="Notifications"
+            aria-label="Afficher les notifications"
+            aria-controls="notifications-panel"
+            [attr.aria-expanded]="isNotificationsOpen"
+            (click)="toggleNotifications($event)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+              <path d="M10 21h4"></path>
+            </svg>
+            <span class="notif-badge-count" *ngIf="unreadCount > 0">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </button>
+
+          <section
+            id="notifications-panel"
+            class="notifications-panel"
+            *ngIf="isNotificationsOpen"
+            aria-label="Notifications récentes"
+            (click)="$event.stopPropagation()"
+          >
+            <header class="notifications-header">
+              <div>
+                <h2>NOTIFICATIONS</h2>
+                <span>{{ unreadCount }} non lue{{ unreadCount > 1 ? 's' : '' }}</span>
+              </div>
+              <button
+                type="button"
+                class="mark-all-btn"
+                [disabled]="unreadCount === 0"
+                (click)="markAllNotificationsAsRead($event)"
+              >
+                Tout marquer comme lu
+              </button>
+            </header>
+
+            <div class="notifications-state" *ngIf="notificationsLoading">
+              Chargement des notifications...
+            </div>
+            <div class="notifications-state error" *ngIf="!notificationsLoading && notificationsError">
+              {{ notificationsError }}
+              <button type="button" (click)="loadNotifications()">Réessayer</button>
+            </div>
+            <div class="notifications-state" *ngIf="!notificationsLoading && !notificationsError && notifications.length === 0">
+              Aucune notification récente.
+            </div>
+
+            <div class="notifications-list" *ngIf="!notificationsLoading && !notificationsError && notifications.length > 0">
+              <button
+                type="button"
+                class="notification-item"
+                *ngFor="let notification of notifications; trackBy: trackNotification"
+                [class.unread]="!notification.lu"
+                [ngClass]="'notification-' + notification.niveau"
+                (click)="markNotificationAsRead(notification)"
+              >
+                <span class="notification-icon" aria-hidden="true">{{ notificationIcon(notification.niveau) }}</span>
+                <span class="notification-content">
+                  <span class="notification-title">{{ notification.titre }}</span>
+                  <span class="notification-message">{{ notification.message }}</span>
+                  <time class="notification-date">{{ notification.date | date:'dd/MM/yyyy HH:mm' }}</time>
+                </span>
+                <span class="unread-dot" *ngIf="!notification.lu" aria-label="Non lue"></span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <button class="logout-btn" type="button" (click)="logout()">⏻ LOGOUT</button>
+      </div>
+    </div>
+  </div>
+</nav>

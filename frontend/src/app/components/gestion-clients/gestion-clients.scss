@@ -1,0 +1,142 @@
+.clients-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 20px;
+  color: #00ff41;
+  font-family: monospace;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.btn-primary {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  cursor: pointer;
+  font-family: monospace;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.success {
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid #00ff41;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.error {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid #ff4444;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.add-form {
+  background: rgba(0, 20, 0, 0.6);
+  border: 1px solid #00ff41;
+  padding: 20px;
+  margin-bottom: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-form input {
+  padding: 8px;
+  background: #001a00;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  margin-bottom: 10px;
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clients-table th,
+.clients-table td {
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  padding: 10px;
+  text-align: left;
+}
+
+.clients-table th {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.center {
+  text-align: center;
+}
+
+.badge {
+  padding: 2px 8px;
+  border: 1px solid;
+  font-size: 0.85em;
+}
+
+.badge-green {
+  border-color: #00ff41;
+  color: #00ff41;
+}
+
+.badge-red {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.badge-orange {
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+.btn-danger-sm {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 0.85em;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  cursor: pointer;
+  font-family: monospace;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.empty-msg,
+.loading-msg {
+  text-align: center;
+  opacity: 0.7;
+  padding: 30px;
+}

@@ -1,0 +1,13 @@
+<div class="modal-overlay" (click)="close.emit()"><div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="scan-detail-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()" (keydown.escape)="close.emit()">
+<div class="modal-header"><span id="scan-detail-title">[ DÉTAIL DU SCAN ]</span><button type="button" class="close-btn" aria-label="Fermer le détail" (click)="close.emit()">×</button></div><div class="modal-body">
+<div class="detail-row"><span class="label">DOMAINE:</span><span class="value">{{ scan.domaine }}</span></div>
+<div class="detail-row"><span class="label">DATE:</span><span class="value">{{ scan.date_scan | date:"dd/MM/yyyy HH:mm:ss" }}</span></div>
+<div class="detail-row"><span class="label">SCORE:</span><span class="value" [ngClass]="scan.riskClass">{{ scan.score_risque_ia }}/10</span></div>
+<app-report-actions [scan]="scan" (pdf)="pdf.emit($event)" (email)="email.emit($event)" (excel)="excel.emit($event)" (json)="json.emit($event)" />
+<section class="scan-section"><span class="label">PROTOCOLES:</span><div class="proto-list">@for (protocol of scan.resultats_ssl?.protocols; track protocol.name) { <span class="proto-item">{{ protocol.name }} — {{ protocol.status }}</span> }</div></section>
+<section class="scan-section"><span class="label">VULNÉRABILITÉS MANUELLES:</span><button type="button" class="action-btn" (click)="openForm.emit()">+ Ajouter</button>
+@for (vulnerability of vulnerabilities; track vulnerability.id) { <div class="cve-item"><strong>{{ vulnerability.nom }}</strong><button type="button" class="action-btn delete-btn" (click)="removeVulnerability.emit(vulnerability.id)">Supprimer</button></div> } @empty { <p>Aucune vulnérabilité manuelle.</p> }</section>
+@if (showForm) { <app-vuln-manuelle-form [scanId]="scan.id" (close)="closeForm.emit()" (added)="added.emit()" /> }
+<div class="modal-actions"><button type="button" class="modal-btn delete-btn" (click)="remove.emit($event)">SUPPRIMER LE SCAN</button></div>
+</div></div></div>
+

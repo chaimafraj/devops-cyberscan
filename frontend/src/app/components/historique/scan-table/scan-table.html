@@ -1,0 +1,15 @@
+<div class="scans-table"><table mat-table [dataSource]="dataSource" class="cyber-table">
+<ng-container matColumnDef="client"><th mat-header-cell *matHeaderCellDef>CLIENT</th><td mat-cell *matCellDef="let scan">{{ scan.client_nom }}</td></ng-container>
+<ng-container matColumnDef="domaine"><th mat-header-cell *matHeaderCellDef>DOMAINE</th><td mat-cell *matCellDef="let scan" class="domain">{{ scan.domaine }}</td></ng-container>
+<ng-container matColumnDef="date"><th mat-header-cell *matHeaderCellDef>DATE</th><td mat-cell *matCellDef="let scan">{{ scan.date_scan | date:"dd/MM/yyyy HH:mm" }}</td></ng-container>
+<ng-container matColumnDef="protocols"><th mat-header-cell *matHeaderCellDef>PROTOCOLES</th><td mat-cell *matCellDef="let scan">{{ scan.resultats_ssl?.protocols?.length || 0 }}</td></ng-container>
+<ng-container matColumnDef="score"><th mat-header-cell *matHeaderCellDef>SCORE</th><td mat-cell *matCellDef="let scan" [ngClass]="scan.riskClass">{{ scan.score_risque_ia }}/10</td></ng-container>
+<ng-container matColumnDef="statut"><th mat-header-cell *matHeaderCellDef>RISQUE</th><td mat-cell *matCellDef="let scan"><span class="badge" [ngClass]="scan.riskClass">{{ scan.statut }}</span></td></ng-container>
+<ng-container matColumnDef="rapport"><th mat-header-cell *matHeaderCellDef>RAPPORT</th><td mat-cell *matCellDef="let scan"><span class="badge">{{ reportLabel(scan.rapportStatus) }}</span></td></ng-container>
+<ng-container matColumnDef="email"><th mat-header-cell *matHeaderCellDef>EMAIL</th><td mat-cell *matCellDef="let scan"><span class="badge">{{ emailLabel(scan.emailStatus) }}</span></td></ng-container>
+<ng-container matColumnDef="exports"><th mat-header-cell *matHeaderCellDef>EXPORTS</th><td mat-cell *matCellDef="let scan"><app-report-actions [scan]="scan" (pdf)="pdf.emit({scan: scan, event: $event})" (email)="email.emit({scan: scan, event: $event})" (excel)="excel.emit({scan: scan, event: $event})" (json)="json.emit({scan: scan, event: $event})" /></td></ng-container>
+<ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef>ACTIONS</th><td mat-cell *matCellDef="let scan"><button type="button" class="action-btn view-btn" (click)="view.emit(scan); $event.stopPropagation()">VOIR</button><button type="button" class="action-btn delete-btn" (click)="remove.emit({scan: scan, event: $event})">SUPPR.</button></td></ng-container>
+<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr><tr mat-row *matRowDef="let scan; columns: displayedColumns" tabindex="0" (click)="view.emit(scan)" (keydown.enter)="view.emit(scan)" (keydown.space)="view.emit(scan); $event.preventDefault()"></tr>
+<tr class="mat-row" *matNoDataRow><td class="mat-cell no-results" [attr.colspan]="displayedColumns.length">{{ loading ? "Chargement..." : "Aucun scan trouvé." }}</td></tr>
+</table><mat-paginator [length]="total" [pageIndex]="currentPage - 1" [pageSize]="pageSize" [disabled]="loading" hidePageSize showFirstLastButtons (page)="page.emit($event)" /></div>
+

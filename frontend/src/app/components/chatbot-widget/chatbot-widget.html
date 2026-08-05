@@ -1,0 +1,178 @@
+@if (visible) {
+  <div class="chatbot-root">
+    @if (open) {
+      <section
+        class="chatbot-panel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="chatbot-title"
+      >
+        <header class="chatbot-header">
+          <div class="chatbot-identity">
+            <span class="chatbot-avatar" aria-hidden="true">AI<span class="status-dot"></span></span
+            ><span class="chatbot-header-copy"
+              ><strong id="chatbot-title">Assistant CyberScan</strong
+              ><span [class.scan-context]="context.scope === 'single'">{{
+                contextLabel
+              }}</span></span
+            >
+          </div>
+          <div class="chatbot-header-actions">
+            <button
+              type="button"
+              class="icon-button"
+              (click)="clearHistory()"
+              title="Effacer la conversation"
+              aria-label="Effacer la conversation"
+            >
+              ⌫</button
+            ><button
+              type="button"
+              class="icon-button"
+              (click)="close()"
+              title="Fermer"
+              aria-label="Fermer"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+        <div #messagesContainer class="chatbot-messages" aria-live="polite">
+          @if (messages.length === 0 && !loading) {
+            <div class="chatbot-empty">
+              <span class="empty-orb" aria-hidden="true">✦</span>
+              <h3>Comment puis-je vous aider ?</h3>
+              <p>Analysez vos scans, vos CVE et vos risques avec un assistant cybersécurité.</p>
+            </div>
+          }
+          @for (msg of messages; track msg.id; let messageIndex = $index) {
+            <article class="message" [ngClass]="msg.role">
+              <div class="message-meta">
+                <span>{{
+                  msg.role === 'user' ? 'Vous' : msg.role === 'error' ? 'Erreur' : 'CyberScan AI'
+                }}</span
+                ><time [attr.datetime]="msg.createdAt">{{ formatTime(msg.createdAt) }}</time>
+              </div>
+              @if (msg.role === 'assistant' && msg.isReport === true) {
+                <div class="response-card">
+                  <div class="response-card-heading">
+                    <span class="assistant-badge">AI</span>
+                    <div>
+                      <strong>Rapport d’analyse</strong><span>Réponse générée par l’assistant</span>
+                    </div>
+                    <span class="verified-badge">Analyse IA</span>
+                  </div>
+                  <div class="response-sections" [class.expanded]="msg.expanded">
+                    @for (section of msg.sections; track section.key; let sectionIndex = $index) {
+                      @if (msg.expanded || sectionIndex < 3) {
+                        <section
+                          class="response-section"
+                          [class.risk-section]="section.key === 'risk'"
+                          [class.score-section]="section.key === 'score'"
+                        >
+                          <h4>
+                            <span aria-hidden="true">{{ section.icon }}</span
+                            >{{ section.label }}
+                          </h4>
+                          <div
+                            class="markdown-content"
+                            [innerHTML]="markdownToHtml(section.content)"
+                          ></div>
+                        </section>
+                      }
+                    }
+                  </div>
+                  <div class="response-actions">
+                    <button type="button" (click)="copyResponse(msg)">
+                      {{ copiedMessageId === msg.id ? '✓ Copié' : '⧉ Copier' }}</button
+                    ><button type="button" (click)="regenerate(messageIndex)" [disabled]="loading">
+                      ↻ Régénérer</button
+                    ><button type="button" (click)="viewReport()">▤ Voir le rapport</button
+                    ><button
+                      type="button"
+                      (click)="toggleDetails(msg)"
+                      [attr.aria-expanded]="msg.expanded"
+                    >
+                      {{ msg.expanded ? 'Réduire' : 'Afficher les détails' }}
+                      {{ msg.expanded ? '⌃' : '⌄' }}
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <div class="message-bubble">{{ msg.text }}</div>
+              }
+            </article>
+          }
+          @if (loading) {
+            <div class="typing-indicator" role="status" aria-live="polite">
+              <span class="typing-avatar" aria-hidden="true">AI</span
+              ><span class="spinner" aria-hidden="true"></span
+              ><span>Assistant est en train d’écrire</span
+              ><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
+          }
+        </div>
+        <div class="chatbot-suggestions" aria-label="Suggestions rapides">
+          @for (cve of visibleCveSuggestions; track cve) {
+            <button
+              type="button"
+              class="suggestion-chip cve"
+              (click)="sendCve(cve)"
+              [disabled]="loading"
+            >
+              🛡 Explique {{ cve }}
+            </button>
+          }
+          @for (question of visibleQuickQuestions; track question) {
+            <button
+              type="button"
+              class="suggestion-chip"
+              (click)="sendQuick(question)"
+              [disabled]="loading"
+            >
+              {{ question }}
+            </button>
+          }
+        </div>
+        <footer class="chatbot-composer">
+          <textarea
+            #messageInput
+            class="chatbot-input"
+            [(ngModel)]="input"
+            (keydown)="onKeydown($event)"
+            placeholder="Posez une question sur votre sécurité…"
+            [disabled]="loading"
+            rows="1"
+            aria-label="Votre message"
+          ></textarea
+          ><button
+            type="button"
+            class="chatbot-send"
+            (click)="send()"
+            [disabled]="loading || !input.trim()"
+            aria-label="Envoyer le message"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m22 2-7 20-4-9-9-4Z"></path>
+              <path d="M22 2 11 13"></path>
+            </svg>
+          </button>
+        </footer>
+      </section>
+    }
+    <button
+      type="button"
+      class="chatbot-fab"
+      (click)="toggle()"
+      [attr.aria-expanded]="open"
+      [attr.aria-label]="open ? 'Fermer l’assistant IA' : 'Ouvrir l’assistant IA'"
+    >
+      @if (open) {
+        <span aria-hidden="true">×</span>
+      } @else {
+        <span aria-hidden="true">✦</span><i></i>
+      }
+    </button>
+  </div>
+}
+

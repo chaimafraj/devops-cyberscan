@@ -1,0 +1,23 @@
+@mixin panel-card($padding: 16px) {
+  border: 1px solid rgba(0, 255, 65, .2);
+  background: #0d1a0d;
+  padding: $padding;
+}
+
+@mixin action-button($padding: 10px 16px, $color: #00ff41) {
+  padding: $padding;
+  background: transparent;
+  border: 1px solid $color;
+  color: $color;
+  cursor: pointer;
+  font-family: var(--mono-font, monospace);
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
+@mixin status-badge($color: #00ff41) {
+  display: inline-block;
+  border: 1px solid $color;
+  color: $color;
+  padding: 2px 8px;
+  font-size: 9px;
+}

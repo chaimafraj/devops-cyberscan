@@ -11,7 +11,9 @@ Celery, PostgreSQL et Redis.
    Copy-Item .env.example .env
    ```
 
-2. Remplacez au minimum `DJANGO_SECRET_KEY` et `POSTGRES_PASSWORD` dans `.env`.
+2. Remplacez au minimum `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD` et
+   `INITIAL_ADMIN_PASSWORD` dans `.env`. Vous pouvez aussi personnaliser
+   `INITIAL_ADMIN_USERNAME` et `INITIAL_ADMIN_EMAIL`.
 
 3. Construisez et démarrez les services :
 
@@ -20,7 +22,12 @@ Celery, PostgreSQL et Redis.
    ```
 
 4. Ouvrez `http://localhost:4200`. L'API reste également accessible sur
-   `http://localhost:8000`.
+   `http://localhost:8000`. Connectez-vous avec les identifiants
+   `INITIAL_ADMIN_USERNAME` et `INITIAL_ADMIN_PASSWORD` de votre fichier `.env`.
+
+Le compte initial est créé automatiquement après les migrations. La commande
+est idempotente : les redéploiements conservent un mot de passe modifié depuis
+l'application.
 
 ## Commandes utiles
 

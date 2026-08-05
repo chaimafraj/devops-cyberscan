@@ -69,11 +69,15 @@ services:
     image: cyberscan-backend
     build:
       context: ./backend
-    environment: *backend-environment
+    environment:
+      <<: *backend-environment
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-admin@cyberscan.local}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:?Set INITIAL_ADMIN_PASSWORD in .env}
     command:
       - /bin/sh
       - -c
-      - python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 1800 --access-logfile - --error-logfile -
+      - python manage.py migrate --noinput && python manage.py ensure_admin && python manage.py collectstatic --noinput && exec gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 1800 --access-logfile - --error-logfile -
     ports:
       - ${BACKEND_PORT:-8000}:8000
     volumes:

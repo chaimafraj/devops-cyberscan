@@ -129,8 +129,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  portainer:
+    image: portainer/portainer-ce:lts
+    ports:
+      - ${PORTAINER_HTTPS_PORT:-9443}:9443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   django_static:
   huggingface_cache:
+  portainer_data:

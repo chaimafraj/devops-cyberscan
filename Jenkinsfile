@@ -9,7 +9,7 @@ pipeline {
 
     environment {
         COMPOSE_PROJECT_NAME = 'cyberscan'
-        NOTIFICATION_EMAIL = 'farajchaima8@gmail.com'
+        NOTIFICATION_EMAIL = 'mahdijr2015@gmail.com'
     }
 
     stages {

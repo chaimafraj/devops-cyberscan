@@ -42,6 +42,12 @@ Les rapports de `backend/media` restent sur l'hôte. Les données PostgreSQL,
 Redis, les fichiers statiques Django et le cache Hugging Face utilisent des
 volumes Docker persistants.
 
+`POSTGRES_PASSWORD` n'est appliqué par l'image PostgreSQL que lors de la
+création initiale du volume `postgres_data`. Le modifier ensuite dans `.env`
+ne change pas le mot de passe du rôle déjà stocké dans la base. Pour une
+installation existante, faites d'abord une rotation du mot de passe dans
+PostgreSQL, ou recréez volontairement le volume si ses données sont jetables.
+
 `docker compose down -v` supprime aussi les volumes et donc les données de la
 base. Ne l'utilisez que si cette suppression est voulue.
 

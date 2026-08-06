@@ -21,17 +21,6 @@ pipeline {
             }
         }
 
-        stage('Validate Docker Compose') {
-            steps {
-                sh 'docker compose config --quiet'
-            }
-        }
-
-        stage('Build Docker images') {
-            steps {
-                sh 'docker compose build'
-            }
-        }
 
         stage('Deploy application') {
             steps {

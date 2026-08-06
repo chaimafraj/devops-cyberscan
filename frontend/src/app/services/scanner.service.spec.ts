@@ -26,7 +26,7 @@ describe('ScannerService', () => {
     let status = '';
 
     service.cancelScan(42).subscribe((response) => (status = response.status));
-    const request = http.expectOne('http://127.0.0.1:8000/api/scans/42/cancel/');
+    const request = http.expectOne('/api/scans/42/cancel/');
 
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({});
@@ -38,7 +38,7 @@ describe('ScannerService', () => {
     service.getReportQr(176).subscribe();
 
     const request = http.expectOne(
-      'http://127.0.0.1:8000/api/scans/176/rapport/qr/',
+      '/api/scans/176/rapport/qr/',
     );
     expect(request.request.method).toBe('GET');
     expect(request.request.responseType).toBe('blob');

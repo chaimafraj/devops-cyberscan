@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface AlerteDetailField {
   label: string;
@@ -64,7 +65,7 @@ const EMPTY_STATS: AlerteStats = {
 export class Alertes implements OnInit, OnDestroy {
   private matrixInterval?: ReturnType<typeof setInterval>;
   private matrixTimeout?: ReturnType<typeof setTimeout>;
-  private readonly apiUrl = 'http://127.0.0.1:8000/api/alertes/';
+  private readonly apiUrl = `${environment.API_BASE_URL}/alertes/`;
 
   alertes: AlerteItem[] = [];
   stats: AlerteStats = { ...EMPTY_STATS };

@@ -10,6 +10,7 @@ import { ExportService } from '../../services/export.service';
 import { ToastService } from '../../services/toast.service';
 import { ChatbotContextService } from '../../services/chatbot-context.service';
 import { VulnManuelleForm } from '../vuln-manuelle-form/vuln-manuelle-form';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-historique',
@@ -50,7 +51,7 @@ class Historique implements OnInit, OnDestroy {
   total = 0;
 
   private matrixInterval: any;
-  private apiUrl = 'http://127.0.0.1:8000/api';
+  private apiUrl = environment.API_BASE_URL;
 
   constructor(
     private http: HttpClient,
@@ -496,7 +497,7 @@ class Historique implements OnInit, OnDestroy {
   }
 
   deleteVulnManuelle(id: number) {
-    this.http.delete(`http://127.0.0.1:8000/api/vulnerabilites/${id}/`).subscribe({
+    this.http.delete(`${environment.API_BASE_URL}/vulnerabilites/${id}/`).subscribe({
       next: () => {
         this.vulnsManuelles = this.vulnsManuelles.filter((v) => v.id !== id);
       },

@@ -53,7 +53,7 @@ describe('Alertes', () => {
   });
 
   function loadAlerts(): void {
-    const request = httpMock.expectOne('http://127.0.0.1:8000/api/alertes/');
+    const request = httpMock.expectOne('/api/alertes/');
     request.flush({
       alertes: [ALERT],
       stats: { critiques: 1, moyennes: 0, faibles: 0, total: 1 },

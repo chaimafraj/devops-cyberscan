@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-force-password',
@@ -19,7 +20,7 @@ export class ForcePassword {
   error = '';
   loading = false;
 
-  private apiUrl = 'http://127.0.0.1:8000/api/auth';
+  private apiUrl = `${environment.API_BASE_URL}/auth`;
 
   constructor(
     private http: HttpClient,

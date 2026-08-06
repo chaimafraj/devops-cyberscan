@@ -20,7 +20,7 @@ describe('VulnManuelleForm', () => {
     httpMock = TestBed.inject(HttpTestingController);
     await fixture.whenStable();
 
-    const initReq = httpMock.expectOne('http://127.0.0.1:8000/api/vuln-templates/');
+    const initReq = httpMock.expectOne('/api/vuln-templates/');
     initReq.flush({});
   });
 

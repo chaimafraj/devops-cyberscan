@@ -22,7 +22,7 @@ describe('Historique', () => {
     httpMock = TestBed.inject(HttpTestingController);
     await fixture.whenStable();
 
-    const initReq = httpMock.expectOne((request) => request.url === 'http://127.0.0.1:8000/api/scans/');
+    const initReq = httpMock.expectOne((request) => request.url === '/api/scans/');
     initReq.flush({ results: [], total: 0, total_pages: 1, page: 1 });
   });
 
@@ -39,7 +39,7 @@ describe('Historique', () => {
 
     component.loadScans();
 
-    const req = httpMock.expectOne((request) => request.url === 'http://127.0.0.1:8000/api/scans/');
+    const req = httpMock.expectOne((request) => request.url === '/api/scans/');
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('page')).toBe('1');
     expect(req.request.params.get('page_size')).toBe('10');
@@ -51,7 +51,7 @@ describe('Historique', () => {
   it('separates the risk level from the scan status', () => {
     component.loadScans();
 
-    const req = httpMock.expectOne((request) => request.url === 'http://127.0.0.1:8000/api/scans/');
+    const req = httpMock.expectOne((request) => request.url === '/api/scans/');
     req.flush({
       results: [
         { id: 1, score_risque_ia: 2, status: 'COMPLETED' },
@@ -83,9 +83,9 @@ describe('Historique', () => {
       resultats_ssl: {},
     });
 
-    const detailRequest = httpMock.expectOne('http://127.0.0.1:8000/api/scans/176/');
+    const detailRequest = httpMock.expectOne('/api/scans/176/');
     const manualRequest = httpMock.expectOne(
-      'http://127.0.0.1:8000/api/scans/176/vulnerabilites/',
+      '/api/scans/176/vulnerabilites/',
     );
 
     detailRequest.flush({
@@ -137,7 +137,7 @@ describe('Historique', () => {
   it('should refresh paginator bindings after the scans response', () => {
     component.loadScans();
 
-    const req = httpMock.expectOne((request) => request.url === 'http://127.0.0.1:8000/api/scans/');
+    const req = httpMock.expectOne((request) => request.url === '/api/scans/');
     req.flush({ results: [], total: 4, total_pages: 1, page: 1 });
 
     const paginator = fixture.debugElement.query(By.directive(MatPaginator))

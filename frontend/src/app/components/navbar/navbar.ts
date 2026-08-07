@@ -6,7 +6,10 @@ import {
   HostListener,
   OnDestroy,
   OnInit,
+  effect,
+  inject,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationStart, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 
@@ -22,29 +25,42 @@ import { Notification, NotificationService } from '../../services/notification.s
   standalone: true,
 })
 export class Navbar implements OnInit, OnDestroy {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly notifService = inject(NotificationService);
+  private readonly dataSync = inject(DataSyncService);
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  /** Zoneless-safe: signal updates schedule change detection after login/navigation. */
+  readonly currentUser = toSignal(this.authService.currentUser$, {
+    initialValue: this.authService.getCurrentUser(),
+  });
+  readonly unreadCount = toSignal(this.notifService.unreadCount, { initialValue: 0 });
+  readonly notifications = toSignal(this.notifService.notifications$, {
+    initialValue: [] as Notification[],
+  });
+
   isDark = true;
   isMenuOpen = false;
   isNotificationsOpen = false;
   notificationsLoading = false;
   notificationsError = '';
-  currentUser: any = null;
-  unreadCount = 0;
-  notifications: Notification[] = [];
 
-  private authSub?: Subscription;
-  private unreadSub?: Subscription;
-  private notificationsSub?: Subscription;
   private refreshSub?: Subscription;
   private routeSub?: Subscription;
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly router: Router,
-    private readonly notifService: NotificationService,
-    private readonly dataSync: DataSyncService,
-    private readonly elementRef: ElementRef<HTMLElement>,
-    private readonly cdr: ChangeDetectorRef,
-  ) {}
+  constructor() {
+    effect(() => {
+      const user = this.currentUser();
+      if (user) {
+        this.notifService.startPolling();
+      } else {
+        this.notifService.stopPolling();
+        this.isNotificationsOpen = false;
+      }
+    });
+  }
 
   ngOnInit(): void {
     const savedTheme = sessionStorage.getItem('theme') || 'dark';
@@ -56,26 +72,9 @@ export class Navbar implements OnInit, OnDestroy {
       .subscribe(() => {
         this.isNotificationsOpen = false;
         this.isMenuOpen = false;
+        this.cdr.markForCheck();
       });
 
-    this.authSub = this.authService.currentUser$.subscribe((user) => {
-      this.currentUser = user;
-      if (user) {
-        this.notifService.startPolling();
-      } else {
-        this.notifService.stopPolling();
-        this.unreadCount = 0;
-        this.notifications = [];
-        this.isNotificationsOpen = false;
-      }
-    });
-
-    this.unreadSub = this.notifService.unreadCount.subscribe((count) => {
-      this.unreadCount = count;
-    });
-    this.notificationsSub = this.notifService.notifications$.subscribe((notifications) => {
-      this.notifications = notifications;
-    });
     this.refreshSub = this.dataSync.notificationsRefresh$.subscribe(() => {
       if (this.isNotificationsOpen) this.loadNotifications();
       else this.notifService.fetchUnreadCount(true);
@@ -83,9 +82,6 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.authSub?.unsubscribe();
-    this.unreadSub?.unsubscribe();
-    this.notificationsSub?.unsubscribe();
     this.refreshSub?.unsubscribe();
     this.routeSub?.unsubscribe();
   }
@@ -102,12 +98,12 @@ export class Navbar implements OnInit, OnDestroy {
     this.notifService.getNotifications().subscribe({
       next: () => {
         this.notificationsLoading = false;
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       },
       error: () => {
         this.notificationsLoading = false;
         this.notificationsError = 'Impossible de charger les notifications.';
-        this.cdr.detectChanges();
+        this.cdr.markForCheck();
       },
     });
   }
@@ -117,16 +113,18 @@ export class Navbar implements OnInit, OnDestroy {
     this.notifService.markAsRead(notification.id).subscribe({
       error: () => {
         this.notificationsError = 'Impossible de marquer cette notification comme lue.';
+        this.cdr.markForCheck();
       },
     });
   }
 
   markAllNotificationsAsRead(event: MouseEvent): void {
     event.stopPropagation();
-    if (this.unreadCount === 0) return;
+    if ((this.unreadCount() ?? 0) === 0) return;
     this.notifService.markAllAsRead().subscribe({
       error: () => {
         this.notificationsError = 'Impossible de marquer les notifications comme lues.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -151,12 +149,14 @@ export class Navbar implements OnInit, OnDestroy {
     const target = event.target;
     if (!(target instanceof Node) || !notificationCenter?.contains(target)) {
       this.isNotificationsOpen = false;
+      this.cdr.markForCheck();
     }
   }
 
   @HostListener('document:keydown.escape')
   closeNotificationsOnEscape(): void {
     this.isNotificationsOpen = false;
+    this.cdr.markForCheck();
   }
 
   toggleTheme(): void {

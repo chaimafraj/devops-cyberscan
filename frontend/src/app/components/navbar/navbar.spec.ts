@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
 
+import { AuthService } from '../../services/auth.service';
 import { Notification, NotificationService } from '../../services/notification.service';
 
 import { Navbar } from './navbar';
@@ -9,25 +11,45 @@ import { Navbar } from './navbar';
 describe('Navbar', () => {
   let component: Navbar;
   let fixture: ComponentFixture<Navbar>;
+  let authService: AuthService;
+
+  function setUser(user: Record<string, unknown> | null): void {
+    if (user) {
+      sessionStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('access_token', 'token');
+      (authService as any).currentUserSubject.next(user);
+    } else {
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('access_token');
+      (authService as any).currentUserSubject.next(null);
+    }
+  }
 
   beforeEach(async () => {
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Navbar],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Navbar);
     component = fixture.componentInstance;
+    authService = TestBed.inject(AuthService);
     await fixture.whenStable();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('hides primary navigation links when the user is not authenticated', () => {
-    component.currentUser = null;
+  it('hides primary navigation links when the user is not authenticated', async () => {
+    setUser(null);
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.nav-links')).toBeNull();
     expect(fixture.nativeElement.querySelector('.menu-toggle')).toBeNull();
@@ -37,15 +59,17 @@ describe('Navbar', () => {
     expect(fixture.nativeElement.textContent).not.toContain('ALERTES');
   });
 
-  it('shows primary navigation links when the user is authenticated', () => {
-    component.currentUser = { username: 'admin', role: 'admin' };
+  it('shows primary navigation links when the user is authenticated without refresh', async () => {
+    setUser({ username: 'admin', role: 'admin' });
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(fixture.nativeElement.querySelector('.nav-links')).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('DASHBOARD');
     expect(fixture.nativeElement.textContent).toContain('SCANNER');
     expect(fixture.nativeElement.textContent).toContain('HISTORIQUE');
     expect(fixture.nativeElement.textContent).toContain('ALERTES');
+    expect(fixture.nativeElement.textContent).toContain('admin');
   });
 
   it('keeps the notifications panel closed until the bell is clicked', () => {
@@ -66,18 +90,21 @@ describe('Navbar', () => {
     expect(load).toHaveBeenCalledOnce();
   });
 
-  it('refreshes the notifications list when loading finishes without another click', () => {
+  it('refreshes the notifications list when loading finishes without another click', async () => {
     const notificationService = TestBed.inject(NotificationService);
     const response$ = new Subject<Notification[]>();
     vi.spyOn(notificationService, 'getNotifications').mockReturnValue(response$);
-    component.currentUser = { username: 'test' };
+    setUser({ username: 'test' });
     component.toggleNotifications({ stopPropagation: vi.fn() } as unknown as MouseEvent);
     fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Chargement des notifications');
 
     response$.next([]);
     response$.complete();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).toContain('Aucune notification');
     expect(fixture.nativeElement.textContent).not.toContain('Chargement des notifications');

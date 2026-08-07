@@ -66,6 +66,19 @@ services:
       retries: 10
     restart: unless-stopped
 
+  media-init:
+    image: cyberscan-backend
+    build:
+      context: ./backend
+    user: root
+    command:
+      - /bin/sh
+      - -c
+      - mkdir -p /app/media/rapports && chown cyberscan:cyberscan /app/media /app/media/rapports
+    volumes:
+      - ./backend/media:/app/media
+    restart: "no"
+
   backend:
     image: cyberscan-backend
     build:
@@ -86,6 +99,8 @@ services:
       - django_static:/app/staticfiles
       - huggingface_cache:/home/cyberscan/.cache/huggingface
     depends_on:
+      media-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -112,6 +127,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      media-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     init: true

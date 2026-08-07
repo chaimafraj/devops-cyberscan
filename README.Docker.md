@@ -42,6 +42,11 @@ Les rapports de `backend/media` restent sur l'hôte. Les données PostgreSQL,
 Redis, les fichiers statiques Django et le cache Hugging Face utilisent des
 volumes Docker persistants.
 
+Le service ponctuel `media-init` crée `backend/media/rapports` et attribue les
+répertoires de médias à l'utilisateur non privilégié du backend avant le
+démarrage de Django et Celery. Cela évite les erreurs `Permission denied` lors
+de la génération des rapports PDF, y compris sur un nouveau serveur Linux.
+
 `POSTGRES_PASSWORD` n'est appliqué par l'image PostgreSQL que lors de la
 création initiale du volume `postgres_data`. Le modifier ensuite dans `.env`
 ne change pas le mot de passe du rôle déjà stocké dans la base. Pour une

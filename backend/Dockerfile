@@ -22,13 +22,17 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 RUN addgroup --system cyberscan \
     && adduser --system --ingroup cyberscan --home /home/cyberscan cyberscan \
-    && mkdir -p /app/media /app/staticfiles $HF_HOME \
+    && mkdir -p /app/media/rapports /app/staticfiles $HF_HOME \
     && chown -R cyberscan:cyberscan /app /home/cyberscan
 
 COPY --chown=cyberscan:cyberscan . .
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-USER cyberscan
+# Entrypoint starts as root to create/chown bind-mounted media, then drops to cyberscan.
+USER root
 
 EXPOSE 8000
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD [gunicorn, backend.wsgi:application, --bind, 0.0.0.0:8000, --workers, 3, --timeout, 1800, --access-logfile, -, --error-logfile, -]

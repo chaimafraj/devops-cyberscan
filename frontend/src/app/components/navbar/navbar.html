@@ -6,6 +6,7 @@
     <div class="logo">CYBER<span>SCAN</span></div>
 
     <button
+      *ngIf="currentUser"
       class="menu-toggle"
       type="button"
       aria-label="Ouvrir le menu de navigation"
@@ -16,7 +17,12 @@
       <span></span><span></span><span></span>
     </button>
 
-    <ul id="primary-navigation" class="nav-links" [class.is-open]="isMenuOpen">
+    <ul
+      *ngIf="currentUser"
+      id="primary-navigation"
+      class="nav-links"
+      [class.is-open]="isMenuOpen"
+    >
       <li><a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">DASHBOARD</a></li>
       <li><a routerLink="/scanner" routerLinkActive="active" (click)="closeMenu()">SCANNER</a></li>
       <li><a routerLink="/historique" routerLinkActive="active" (click)="closeMenu()">HISTORIQUE</a></li>

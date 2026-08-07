@@ -1,14 +1,18 @@
+import logging
 import secrets
 import string
 
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.conf import settings
+from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import User, Client, Site, Scan
+
+logger = logging.getLogger(__name__)
 
 
 def generate_temp_password(length=10):
@@ -71,48 +75,59 @@ def clients_list(request):
 
         temp_password = generate_temp_password()
 
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=temp_password,
-            role='client',
-        )
-
-        client = Client.objects.create(
-            nom=nom,
-            email=email,
-            user=user,
-            must_change_password=True,
-            created_by=request.user,
-        )
-
         try:
-            send_mail(
-                subject='Vos identifiants CyberScan',
-                message=(
-                    f"Bonjour {nom},\n\n"
-                    f"Votre compte CyberScan a été créé.\n\n"
-                    f"Nom d'utilisateur : {username}\n"
-                    f"Mot de passe temporaire : {temp_password}\n\n"
-                    f"Merci de vous connecter et de changer votre mot de passe "
-                    f"dès votre première connexion.\n\n"
-                    f"L'équipe CyberScan"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=temp_password,
+                    role='client',
+                )
+
+                client = Client.objects.create(
+                    nom=nom,
+                    email=email,
+                    user=user,
+                    must_change_password=True,
+                    created_by=request.user,
+                )
+
+                email_sent = send_mail(
+                    subject='Vos identifiants CyberScan',
+                    message=(
+                        f"Bonjour {nom},\n\n"
+                        f"Votre compte CyberScan a été créé.\n\n"
+                        f"Nom d'utilisateur : {username}\n"
+                        f"Mot de passe temporaire : {temp_password}\n\n"
+                        f"Merci de vous connecter et de changer votre mot de passe "
+                        f"dès votre première connexion.\n\n"
+                        f"L'équipe CyberScan"
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                if email_sent != 1:
+                    raise RuntimeError("Le serveur SMTP n'a accepté aucun message")
+        except Exception:
+            logger.exception(
+                'client_invitation_email_failed username=%s recipient=%s',
+                username,
+                email,
             )
-            email_status = 'envoyé'
-        except Exception as e:
-            email_status = f'échec: {str(e)}'
+            return Response({
+                'error': (
+                    "L'e-mail d'identifiants n'a pas pu être envoyé. "
+                    "Le client n'a pas été créé ; vérifiez la configuration SMTP et réessayez."
+                ),
+            }, status=502)
 
         return Response({
             'id': client.id,
             'nom': client.nom,
             'email': client.email,
-            'email_status': email_status,
+            'email_status': 'envoyé',
         }, status=201)
-
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

@@ -72,9 +72,26 @@ def security_score_from_risk(risk_score: Optional[float]) -> float:
 
 
 def _reports_dir() -> Path:
-    base = Path(getattr(settings, 'MEDIA_ROOT', settings.BASE_DIR / 'media'))
+    """Return the PDF output directory, creating it if needed.
+
+    Docker bind-mounts often replace ``/app/media`` with a host folder that may
+    be missing ``rapports/``. Create both MEDIA_ROOT and REPORTS_DIR explicitly
+    so PDF generation does not fail with FileNotFoundError.
+    """
+    base = Path(getattr(settings, 'MEDIA_ROOT', Path(settings.BASE_DIR) / 'media'))
     reports = Path(getattr(settings, 'REPORTS_DIR', base / 'rapports'))
-    reports.mkdir(parents=True, exist_ok=True)
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+        reports.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"Impossible de créer le dossier des rapports PDF ({reports}): {exc}. "
+            "Vérifiez que le volume media est monté et accessible en écriture."
+        ) from exc
+    if not os.access(reports, os.W_OK):
+        raise RuntimeError(
+            f"Le dossier des rapports PDF n'est pas accessible en écriture: {reports}"
+        )
     return reports
 
 

@@ -75,6 +75,8 @@ export class GestionClients implements OnInit {
 
   createClient() {
     this.addError = '';
+    this.error = '';
+    this.successMessage = '';
 
     if (!this.newNom || !this.newUsername || !this.newEmail) {
       this.addError = "Nom, nom d'utilisateur et email requis";
@@ -86,8 +88,25 @@ export class GestionClients implements OnInit {
     this.cdr.detectChanges();
 
     this.clientService.createClient(this.newNom, this.newUsername, this.newEmail).subscribe({
-      next: () => {
+      next: (response) => {
         this.addLoading = false;
+        const emailStatus = String(response?.email_status || '');
+
+        if (!emailStatus.toLowerCase().startsWith('envoy')) {
+          this.error = (
+            `Client "${this.newNom}" créé, mais l'e-mail d'identifiants n'a pas été envoyé`
+            + (emailStatus ? ` (${emailStatus})` : '')
+            + '. Supprimez ce client avant de réessayer.'
+          );
+          this.newNom = '';
+          this.newUsername = '';
+          this.newEmail = '';
+          this.showAddForm = false;
+          this.currentPage = 1;
+          this.loadClients();
+          return;
+        }
+
         this.successMessage = `Client "${this.newNom}" créé — email envoyé.`;
         this.newNom = '';
         this.newUsername = '';

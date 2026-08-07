@@ -139,6 +139,8 @@ def user_detail(request, pk):
         return Response({'message': 'Utilisateur supprimé'})
     except User.DoesNotExist:
         return Response({'error': 'Utilisateur introuvable'}, status=404)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
@@ -158,8 +160,18 @@ def change_password_view(request):
     user.set_password(new_password)
     user.save()
 
+    must_change = False
     if hasattr(user, 'client_profile'):
         user.client_profile.must_change_password = False
-        user.client_profile.save()
+        user.client_profile.save(update_fields=['must_change_password'])
 
-    return Response({'message': 'Mot de passe modifié avec succès'})
+    return Response({
+        'message': 'Mot de passe modifié avec succès',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'must_change_password': must_change,
+        },
+    })

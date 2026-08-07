@@ -26,7 +26,12 @@ export class Login implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/dashboard']);
+      const user = this.authService.getCurrentUser();
+      if (user?.must_change_password) {
+        this.router.navigate(['/force-password']);
+      } else {
+        this.router.navigate(['/dashboard']);
+      }
     }
     this.startMatrix();
   }

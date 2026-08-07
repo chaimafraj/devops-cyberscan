@@ -59,9 +59,14 @@ export class ForcePassword {
         new_password: this.newPassword,
       })
       .subscribe({
-        next: () => {
+        next: (res: any) => {
+          this.authService.updateCurrentUser({
+            ...(res?.user || {}),
+            must_change_password: false,
+          });
           this.loading = false;
-          this.router.navigate(['/dashboard']);
+          this.cdr.detectChanges();
+          this.router.navigateByUrl('/dashboard');
         },
         error: (err) => {
           this.loading = false;

@@ -25,6 +25,29 @@ describe('Navbar', () => {
     expect(component).toBeTruthy();
   });
 
+  it('hides primary navigation links when the user is not authenticated', () => {
+    component.currentUser = null;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.nav-links')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.menu-toggle')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('DASHBOARD');
+    expect(fixture.nativeElement.textContent).not.toContain('SCANNER');
+    expect(fixture.nativeElement.textContent).not.toContain('HISTORIQUE');
+    expect(fixture.nativeElement.textContent).not.toContain('ALERTES');
+  });
+
+  it('shows primary navigation links when the user is authenticated', () => {
+    component.currentUser = { username: 'admin', role: 'admin' };
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.nav-links')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('DASHBOARD');
+    expect(fixture.nativeElement.textContent).toContain('SCANNER');
+    expect(fixture.nativeElement.textContent).toContain('HISTORIQUE');
+    expect(fixture.nativeElement.textContent).toContain('ALERTES');
+  });
+
   it('keeps the notifications panel closed until the bell is clicked', () => {
     fixture.detectChanges();
 

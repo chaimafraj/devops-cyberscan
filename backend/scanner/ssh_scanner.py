@@ -445,6 +445,17 @@ def _stop_local_container(container_name):
         logger.warning('ZAP: arrêt du conteneur %s impossible', container_name, exc_info=True)
 
 
+def _remove_local_volume(volume_name):
+    try:
+        quoted_name = shlex.quote(volume_name)
+        _run_local_command(
+            f'docker volume rm -f {quoted_name} >/dev/null 2>&1 || true',
+            timeout=20,
+        )
+    except Exception:
+        logger.warning('ZAP: suppression du volume %s impossible', volume_name, exc_info=True)
+
+
 def _strip_html(text):
     """Nettoie les champs desc/solution de ZAP (qui contiennent du HTML)."""
     if not text:
@@ -467,6 +478,7 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
     findings = [{'name', 'risk', 'url', 'description', 'solution', 'count'}]
     """
     container_name = None
+    volume_name = None
     report_path = None
     try:
         clean_target = target.strip()
@@ -478,6 +490,7 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
         quoted_url = shlex.quote(url)
         job_id = getattr(cancel_check, 'scan_id', None) or f'{os.getpid()}-{abs(hash(clean_target)) % 100000}'
         container_name = f'cyberscan-zap-{job_id}'
+        volume_name = f'cyberscan-zap-work-{job_id}'
 
         # 1) Vérifier le client Docker et l'accès au daemon du serveur.
         _, docker_error, docker_code = _run_local_command(
@@ -493,9 +506,10 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
                 'raw': docker_error,
             }
 
-        # 2) Le rapport reste dans le conteneur ZAP puis `docker cp` le copie
-        #    dans le worker. Cela évite les problèmes de bind mounts lorsque
-        #    le client Docker est lui-même exécuté dans un conteneur.
+        # 2) ZAP exige que /zap/wrk soit monté avec les options de rapport.
+        #    Un volume Docker temporaire évite de transmettre au daemon de
+        #    l'hôte un chemin local au conteneur worker. Après le scan,
+        #    `docker cp` copie le rapport depuis le conteneur ZAP arrêté.
         report_name = f"zap_{os.getpid()}_{abs(hash(clean_target)) % 100000}.json"
         report_path = os.path.join(tempfile.gettempdir(), report_name)
 
@@ -526,8 +540,9 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
         #    -m 2 : 2 min de spider max (borne la durée)
         #    -J : rapport JSON écrit dans /zap/wrk/ dans le conteneur ZAP
         logger.info("ZAP: démarrage du scan baseline sur %s", url)
+        work_mount = shlex.quote(f'type=volume,src={volume_name},dst=/zap/wrk')
         scan_cmd = (
-            f"docker run --name {shlex.quote(container_name)} {ZAP_IMAGE} "
+            f"docker run --name {shlex.quote(container_name)} --mount {work_mount} {ZAP_IMAGE} "
             f"zap-baseline.py -t {quoted_url} -I -m 2 -J {report_name}"
         )
         out, err, exit_code = _run_local_command(
@@ -599,6 +614,8 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
     finally:
         if container_name is not None:
             _stop_local_container(container_name)
+        if volume_name is not None:
+            _remove_local_volume(volume_name)
         if report_path is not None:
             try:
                 os.remove(report_path)

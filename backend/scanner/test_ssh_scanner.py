@@ -1,10 +1,10 @@
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 from django.test import SimpleTestCase, override_settings
 
 from .scan_cancellation import ScanCancelled
-from .ssh_scanner import _run_local_command, run_sslscan
+from .ssh_scanner import _run_local_command, run_sslscan, run_zap
 
 
 class RunLocalCommandTests(SimpleTestCase):
@@ -59,6 +59,28 @@ class RunLocalCommandTests(SimpleTestCase):
 
         cleanup.assert_called_once_with()
         terminate_process.assert_called_once_with(process)
+
+
+class RunZapTests(SimpleTestCase):
+    @patch('scanner.ssh_scanner.os.remove')
+    @patch('scanner.ssh_scanner.open', new_callable=mock_open, read_data='{"site": []}')
+    @patch('scanner.ssh_scanner.os.path.isfile', return_value=True)
+    @patch('scanner.ssh_scanner._run_local_command', return_value=('', '', 0))
+    def test_mounts_and_removes_temporary_work_volume(
+        self, run_command, _isfile, _report_file, remove_file,
+    ):
+        result = run_zap('https://app.example.test')
+
+        self.assertTrue(result['success'])
+        commands = [call.args[0] for call in run_command.call_args_list]
+        scan_command = next(command for command in commands if command.startswith('docker run --name'))
+        self.assertIn('--mount type=volume,src=cyberscan-zap-work-', scan_command)
+        self.assertIn(',dst=/zap/wrk', scan_command)
+        self.assertTrue(any(
+            command.startswith('docker volume rm -f cyberscan-zap-work-')
+            for command in commands
+        ))
+        remove_file.assert_called_once()
 
 
 @override_settings(SCANNER_COMMAND_TIMEOUT=60)

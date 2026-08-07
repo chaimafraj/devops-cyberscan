@@ -14,15 +14,7 @@ describe('Navbar', () => {
   let authService: AuthService;
 
   function setUser(user: Record<string, unknown> | null): void {
-    if (user) {
-      sessionStorage.setItem('user', JSON.stringify(user));
-      sessionStorage.setItem('access_token', 'token');
-      (authService as any).currentUserSubject.next(user);
-    } else {
-      sessionStorage.removeItem('user');
-      sessionStorage.removeItem('access_token');
-      (authService as any).currentUserSubject.next(null);
-    }
+    authService.setCurrentUser(user);
   }
 
   beforeEach(async () => {

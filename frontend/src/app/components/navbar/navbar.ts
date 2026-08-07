@@ -10,7 +10,13 @@ import {
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationStart, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  NavigationEnd,
+  NavigationStart,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
@@ -32,10 +38,8 @@ export class Navbar implements OnInit, OnDestroy {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  /** Zoneless-safe: signal updates schedule change detection after login/navigation. */
-  readonly currentUser = toSignal(this.authService.currentUser$, {
-    initialValue: this.authService.getCurrentUser(),
-  });
+  /** Direct auth signal — updates the view immediately after login (zoneless-safe). */
+  readonly currentUser = this.authService.currentUser;
   readonly unreadCount = toSignal(this.notifService.unreadCount, { initialValue: 0 });
   readonly notifications = toSignal(this.notifService.notifications$, {
     initialValue: [] as Notification[],
@@ -67,11 +71,19 @@ export class Navbar implements OnInit, OnDestroy {
     this.isDark = savedTheme === 'dark';
     document.body.setAttribute('data-theme', savedTheme);
 
+    // Ensure session is reflected even if login happened before this view checked.
+    this.authService.syncUserFromStorage();
+
     this.routeSub = this.router.events
-      .pipe(filter((event) => event instanceof NavigationStart))
-      .subscribe(() => {
-        this.isNotificationsOpen = false;
-        this.isMenuOpen = false;
+      .pipe(filter((event) => event instanceof NavigationStart || event instanceof NavigationEnd))
+      .subscribe((event) => {
+        if (event instanceof NavigationStart) {
+          this.isNotificationsOpen = false;
+          this.isMenuOpen = false;
+        }
+        if (event instanceof NavigationEnd) {
+          this.authService.syncUserFromStorage();
+        }
         this.cdr.markForCheck();
       });
 

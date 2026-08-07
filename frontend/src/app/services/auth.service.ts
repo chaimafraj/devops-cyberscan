@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import {
@@ -15,17 +15,22 @@ import { environment } from '../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private apiUrl = `${environment.API_BASE_URL}/auth`;
-  private currentUserSubject = new BehaviorSubject<any>(this.getUserFromStorage());
   private refreshRequest$: Observable<string> | null = null;
 
-  currentUser$ = this.currentUserSubject.asObservable();
+  /** Native signal — required for zoneless Angular change detection. */
+  private readonly currentUserSignal = signal<any>(this.readUserFromStorage());
+  readonly currentUser = this.currentUserSignal.asReadonly();
+
+  /** Kept for existing RxJS consumers; always kept in sync with the signal. */
+  private readonly currentUserSubject = new BehaviorSubject<any>(this.currentUserSignal());
+  readonly currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
     private http: HttpClient,
     private router: Router,
   ) {}
 
-  private getUserFromStorage(): any {
+  private readUserFromStorage(): any {
     const user = sessionStorage.getItem('user');
     if (!user || user === 'undefined') return null;
     try {
@@ -35,14 +40,33 @@ export class AuthService {
     }
   }
 
+  private setUserState(user: any): void {
+    if (user) {
+      sessionStorage.setItem('user', JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem('user');
+    }
+    this.currentUserSignal.set(user);
+    this.currentUserSubject.next(user);
+  }
+
+  private persistAuthSession(response: {
+    access?: string;
+    refresh?: string;
+    user?: any;
+  }): void {
+    if (response.access) {
+      sessionStorage.setItem('access_token', response.access);
+    }
+    if (response.refresh) {
+      sessionStorage.setItem('refresh_token', response.refresh);
+    }
+    this.setUserState(response.user ?? null);
+  }
+
   login(username: string, password: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/login/`, { username, password }).pipe(
-      tap((response: any) => {
-        sessionStorage.setItem('access_token', response.access);
-        sessionStorage.setItem('refresh_token', response.refresh);
-        sessionStorage.setItem('user', JSON.stringify(response.user));
-        this.currentUserSubject.next(response.user);
-      }),
+      tap((response: any) => this.persistAuthSession(response)),
     );
   }
 
@@ -53,12 +77,7 @@ export class AuthService {
     role: string;
   }): Observable<any> {
     return this.http.post(`${this.apiUrl}/register/`, data).pipe(
-      tap((response: any) => {
-        sessionStorage.setItem('access_token', response.access);
-        sessionStorage.setItem('refresh_token', response.refresh);
-        sessionStorage.setItem('user', JSON.stringify(response.user));
-        this.currentUserSubject.next(response.user);
-      }),
+      tap((response: any) => this.persistAuthSession(response)),
     );
   }
 
@@ -109,9 +128,13 @@ export class AuthService {
   private clearSession(): void {
     sessionStorage.removeItem('access_token');
     sessionStorage.removeItem('refresh_token');
-    sessionStorage.removeItem('user');
-    this.currentUserSubject.next(null);
+    this.setUserState(null);
     this.router.navigate(['/login']);
+  }
+
+  /** Re-read sessionStorage into the signal (e.g. after navigation). */
+  syncUserFromStorage(): void {
+    this.setUserState(this.readUserFromStorage());
   }
 
   getToken(): string | null {
@@ -119,16 +142,23 @@ export class AuthService {
   }
 
   getCurrentUser(): any {
-    return this.currentUserSubject.value;
+    return this.currentUserSignal();
   }
 
   updateCurrentUser(partial: Record<string, unknown>): void {
     const current = this.getCurrentUser();
     if (!current) return;
+    this.setUserState({ ...current, ...partial });
+  }
 
-    const updated = { ...current, ...partial };
-    sessionStorage.setItem('user', JSON.stringify(updated));
-    this.currentUserSubject.next(updated);
+  /** Explicitly set the authenticated user (login sync / tests). */
+  setCurrentUser(user: any): void {
+    if (user) {
+      sessionStorage.setItem('access_token', sessionStorage.getItem('access_token') || 'token');
+    } else {
+      sessionStorage.removeItem('access_token');
+    }
+    this.setUserState(user);
   }
 
   getUserRole(): string {

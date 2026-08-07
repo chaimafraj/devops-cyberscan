@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import logging
 from io import BytesIO
-from email.mime.image import MIMEImage
+import email.utils
+from email.message import MIMEPart
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from typing import Any, Dict, List, Optional
@@ -280,11 +281,17 @@ def build_qr_png(url: str, size: int = 220) -> bytes:
     return output.getvalue()
 
 
-def _inline_png(content: bytes, cid: str, filename: str) -> MIMEImage:
-    image = MIMEImage(content, _subtype='png')
-    image.add_header('Content-ID', f'<{cid}>')
-    image.add_header('Content-Disposition', 'inline', filename=filename)
-    return image
+def _inline_png(content: bytes, cid: str, filename: str) -> MIMEPart:
+    part = MIMEPart()
+    part.set_content(
+        content,
+        maintype='image',
+        subtype='png',
+        disposition='inline',
+        filename=filename,
+        cid=f'<{cid}>',
+    )
+    return part
 
 
 def build_email_subject(scan: Scan, context: Optional[dict] = None) -> str:
@@ -377,7 +384,6 @@ def send_scan_report_email(
             to=recipients,
         )
         email.attach_alternative(html_body, 'text/html')
-        email.mixed_subtype = 'related'
         email.attach(_inline_png(build_logo_png(), email_context['logo_cid'], 'cyberscan-logo.png'))
         email.attach(
             _inline_png(

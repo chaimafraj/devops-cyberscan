@@ -156,8 +156,9 @@ export class Navbar implements OnInit, OnDestroy {
   closeNotificationsOnOutsideClick(event: MouseEvent): void {
     if (!this.isNotificationsOpen) return;
 
-    const notificationCenter =
-      this.elementRef.nativeElement.querySelector<HTMLElement>('.notification-center');
+    const notificationCenter = this.elementRef.nativeElement.querySelector(
+      '.notification-center',
+    ) as HTMLElement | null;
     const target = event.target;
     if (!(target instanceof Node) || !notificationCenter?.contains(target)) {
       this.isNotificationsOpen = false;

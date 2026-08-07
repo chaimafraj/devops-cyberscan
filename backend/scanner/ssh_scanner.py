@@ -535,14 +535,31 @@ def run_zap(target, timeout=600, port=None, cancel_check=None):
                 'raw': pull_error,
             }
 
+        # Le volume nommé est créé par Docker avec root comme propriétaire,
+        # tandis que l'image officielle exécute ZAP avec l'utilisateur `zap`.
+        # Une initialisation courte en root rend /zap/wrk accessible, puis le
+        # scan principal conserve l'utilisateur non privilégié de l'image.
+        work_mount = shlex.quote(f'type=volume,src={volume_name},dst=/zap/wrk')
+        _, volume_error, volume_code = _run_local_command(
+            f"docker run --rm --user root --mount {work_mount} {image} "
+            "chown zap:zap /zap/wrk",
+            timeout=30,
+        )
+        if volume_code != 0:
+            return {
+                'success': False,
+                'error': volume_error.strip() or 'Impossible de préparer le volume de travail ZAP',
+                'findings': [],
+                'raw': volume_error,
+            }
+
         # 4) Lancer le scan baseline.
         #    -I : ne pas retourner un code d'échec sur les warnings
         #    -m 2 : 2 min de spider max (borne la durée)
         #    -J : rapport JSON écrit dans /zap/wrk/ dans le conteneur ZAP
         logger.info("ZAP: démarrage du scan baseline sur %s", url)
-        work_mount = shlex.quote(f'type=volume,src={volume_name},dst=/zap/wrk')
         scan_cmd = (
-            f"docker run --name {shlex.quote(container_name)} --mount {work_mount} {ZAP_IMAGE} "
+            f"docker run --name {shlex.quote(container_name)} --mount {work_mount} {image} "
             f"zap-baseline.py -t {quoted_url} -I -m 2 -J {report_name}"
         )
         out, err, exit_code = _run_local_command(

@@ -73,6 +73,12 @@ class RunZapTests(SimpleTestCase):
 
         self.assertTrue(result['success'])
         commands = [call.args[0] for call in run_command.call_args_list]
+        volume_init_command = next(
+            command for command in commands
+            if command.startswith('docker run --rm --user root')
+        )
+        self.assertIn('--mount type=volume,src=cyberscan-zap-work-', volume_init_command)
+        self.assertTrue(volume_init_command.endswith('chown zap:zap /zap/wrk'))
         scan_command = next(command for command in commands if command.startswith('docker run --name'))
         self.assertIn('--mount type=volume,src=cyberscan-zap-work-', scan_command)
         self.assertIn(',dst=/zap/wrk', scan_command)
@@ -81,6 +87,27 @@ class RunZapTests(SimpleTestCase):
             for command in commands
         ))
         remove_file.assert_called_once()
+
+    @patch('scanner.ssh_scanner.os.remove', side_effect=FileNotFoundError)
+    @patch('scanner.ssh_scanner._run_local_command', side_effect=[
+        ('', '', 0),
+        ('', '', 0),
+        ('', 'volume permission failure', 1),
+        ('', '', 0),
+        ('', '', 0),
+    ])
+    def test_reports_volume_initialization_error_and_cleans_up(
+        self, run_command, _remove_file,
+    ):
+        result = run_zap('https://app.example.test')
+
+        self.assertFalse(result['success'])
+        self.assertEqual(result['error'], 'volume permission failure')
+        commands = [call.args[0] for call in run_command.call_args_list]
+        self.assertTrue(any(
+            command.startswith('docker volume rm -f cyberscan-zap-work-')
+            for command in commands
+        ))
 
 
 @override_settings(SCANNER_COMMAND_TIMEOUT=60)

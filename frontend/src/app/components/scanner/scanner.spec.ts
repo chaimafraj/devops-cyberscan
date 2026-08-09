@@ -29,8 +29,13 @@ describe('Scanner', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should not display Nuclei as a scan option', () => {
-    expect(component.options.some((option) => option.id === 'nuclei')).toBeFalsy();
+  it('should display Nuclei as an optional website scan', () => {
+    const nuclei = component.options.find((option) => option.id === 'nuclei');
+    expect(nuclei).toBeTruthy();
+    expect(nuclei?.checked).toBe(false);
+
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#nuclei')).not.toBeNull();
   });
 
   it('should keep the progress state while an asynchronous scan is queued', () => {

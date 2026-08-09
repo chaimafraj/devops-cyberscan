@@ -1,3 +1,5 @@
+FROM projectdiscovery/nuclei:v3.8.0 AS nuclei
+
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -6,6 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HOME=/home/cyberscan/.cache/huggingface
 
 WORKDIR /app
+
+COPY --from=nuclei /usr/local/bin/nuclei /usr/local/bin/nuclei
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -24,6 +28,11 @@ RUN addgroup --system cyberscan \
     && adduser --system --ingroup cyberscan --home /home/cyberscan cyberscan \
     && mkdir -p /app/media/rapports /app/staticfiles $HF_HOME \
     && chown -R cyberscan:cyberscan /app /home/cyberscan
+
+# Download the official HTTP templates at image-build time so scans do not
+# depend on a first-run template bootstrap inside the Celery worker.
+RUN HOME=/home/cyberscan nuclei -update-templates \
+    && chown -R cyberscan:cyberscan /home/cyberscan
 
 COPY --chown=cyberscan:cyberscan . .
 COPY docker-entrypoint.sh /docker-entrypoint.sh

@@ -11,6 +11,14 @@ export interface ZapFinding {
   solution: string;
 }
 
+export interface NucleiFinding {
+  template_id: string;
+  name: string;
+  severity: string;
+  description: string;
+  matched_at: string;
+}
+
 // Un protocole SSL/TLS détecté
 export interface ProtocolResult {
   name: string;
@@ -24,6 +32,10 @@ export interface SiteReport {
   vulnerabilities?: string[];
   score_risque_ia?: number;
   zap_findings?: ZapFinding[];
+  nuclei_findings?: NucleiFinding[];
+  nuclei_requested?: boolean;
+  nuclei_success?: boolean;
+  nuclei_error?: string | null;
   [key: string]: any; // champs additionnels renvoyés par l'API
 }
 

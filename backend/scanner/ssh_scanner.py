@@ -130,6 +130,8 @@ def run_nmap(target, port=None):
         if 'closed' in out_lower and 'open' not in out_lower:
             return {'success': False, 'error': f"PORT FERMÉ: {scan_port} fermé sur '{target}'", 'raw': combined}
         return {'success': True, 'error': None, 'raw': combined}
+    except ScanCancelled:
+        raise
     except Exception as e:
         return {'success': False, 'error': str(e), 'raw': ''}
 
@@ -256,7 +258,7 @@ def run_ssllabs(target):
         return {'success': False, 'status': 'error', 'grade': 'N/A', 'error': str(e)}
 
 
-def run_nuclei(target, port=None):
+def run_nuclei(target, port=None, cancel_check=None):
     def parse_nuclei_output(output):
         findings = []
 
@@ -337,12 +339,14 @@ def run_nuclei(target, port=None):
         raw_output, err, exit_status = _run_local_command(
             f"{base_command} -jsonl",
             timeout=110,
+            cancel_check=cancel_check,
         )
 
         if 'flag provided but not defined' in err.lower() and 'jsonl' in err.lower():
             raw_output, err, exit_status = _run_local_command(
                 f"{base_command} -json",
                 timeout=110,
+                cancel_check=cancel_check,
             )
 
         combined_output = '\n'.join(part for part in (raw_output, err) if part)
@@ -369,6 +373,8 @@ def run_nuclei(target, port=None):
             }
 
         return {'success': True, 'findings': findings, 'raw': combined_output}
+    except ScanCancelled:
+        raise
     except Exception as e:
         # Some process errors stringify to an empty string. Returning the
         # class name makes the failure actionable.

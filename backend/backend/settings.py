@@ -223,8 +223,9 @@ CELERY_TASK_TIME_LIMIT = config('CELERY_TASK_TIME_LIMIT', default=1800, cast=int
 CELERY_TASK_SOFT_TIME_LIMIT = config('CELERY_TASK_SOFT_TIME_LIMIT', default=1740, cast=int)
 
 
-# Nuclei est volontairement désactivé dans le pipeline et l'interface Scanner.
-NUCLEI_ENABLED = False
+# Nuclei est disponible dans le worker et reste lancé à la demande depuis la
+# case à cocher de l'interface Scanner.
+NUCLEI_ENABLED = config('NUCLEI_ENABLED', default=True, cast=bool)
 
 # Enrichissement réseau utilisé par les rapports (IP, ASN, hébergeur).
 IP_METADATA_LOOKUP_ENABLED = config('IP_METADATA_LOOKUP_ENABLED', default=True, cast=bool)

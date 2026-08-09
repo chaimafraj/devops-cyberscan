@@ -689,6 +689,7 @@ class Historique implements OnInit, OnDestroy {
       { key: 'whatweb', label: 'WhatWeb', present: results.whatweb?.success === true || technologies.length > 0, count: technologies.length, error: results.whatweb?.error },
       { key: 'ssllabs', label: 'SSL Labs', present: results.ssllabs?.success === true || !!results.ssllabs?.grade, count: results.ssllabs?.grade && results.ssllabs.grade !== 'N/A' ? 1 : 0, error: results.ssllabs?.error },
       { key: 'nvd', label: 'NVD', present: results.nvd?.requested === true || (results.nvd_cves?.length ?? 0) > 0, count: results.nvd_cves?.length ?? results.nvd?.cves_count ?? 0, error: results.nvd?.success === false ? (results.nvd?.errors ?? []).join(', ') : null },
+      { key: 'nuclei', label: 'Nuclei', present: results.nuclei_requested === true || results.nuclei_success === true || !!results.nuclei_raw || (results.nuclei_findings?.length ?? 0) > 0, count: results.nuclei_findings?.length ?? 0, error: results.nuclei_requested === true && results.nuclei_success === false ? results.nuclei_error : null },
       { key: 'zap', label: 'OWASP ZAP', present: results.zap_success === true || !!results.zap_raw || (results.zap_findings?.length ?? 0) > 0, count: results.zap_findings?.length ?? 0, error: results.zap_error },
     ];
     return definitions.map((tool) => {

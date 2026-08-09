@@ -4,7 +4,7 @@ from unittest.mock import Mock, mock_open, patch
 from django.test import SimpleTestCase, override_settings
 
 from .scan_cancellation import ScanCancelled
-from .ssh_scanner import _run_local_command, run_sslscan, run_zap
+from .ssh_scanner import _run_local_command, run_nuclei, run_sslscan, run_zap
 
 
 class RunLocalCommandTests(SimpleTestCase):
@@ -108,6 +108,36 @@ class RunZapTests(SimpleTestCase):
             command.startswith('docker volume rm -f cyberscan-zap-work-')
             for command in commands
         ))
+
+
+class RunNucleiTests(SimpleTestCase):
+    @patch('scanner.ssh_scanner._run_local_command')
+    def test_scans_website_with_local_nuclei_command_and_parses_jsonl(self, run_command):
+        run_command.return_value = (
+            '{"template-id":"CVE-2026-12345","info":{"name":"Example issue",'
+            '"severity":"high","description":"Detected issue"},'
+            '"matched-at":"https://audit.example/login"}\n',
+            '',
+            0,
+        )
+
+        result = run_nuclei('audit.example', 8443)
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['findings'][0]['template_id'], 'CVE-2026-12345')
+        self.assertEqual(result['findings'][0]['severity'], 'high')
+        command = run_command.call_args.args[0]
+        self.assertIn('nuclei -u https://audit.example:8443', command)
+        self.assertIn('-jsonl', command)
+
+    @patch('scanner.ssh_scanner._run_local_command', side_effect=ScanCancelled('cancelled'))
+    def test_propagates_cancellation_to_running_command(self, run_command):
+        cancel_check = Mock(return_value=True)
+
+        with self.assertRaises(ScanCancelled):
+            run_nuclei('audit.example', cancel_check=cancel_check)
+
+        self.assertIs(run_command.call_args.kwargs['cancel_check'], cancel_check)
 
 
 @override_settings(SCANNER_COMMAND_TIMEOUT=60)

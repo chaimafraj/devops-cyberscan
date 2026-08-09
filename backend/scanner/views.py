@@ -2,6 +2,7 @@ import os
 import re
 import time
 from functools import lru_cache
+from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, Avg
 from rest_framework.response import Response
@@ -14,7 +15,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import Scan, Client
 from .scan_cancellation import ScanCancelled
 from .serializers import ScanDetailSerializer, ScanSerializer
-from .ssh_scanner import run_sslscan, run_nmap, run_openssl, run_whatweb, run_ssllabs, run_zap, parse_target
+from .ssh_scanner import (
+    parse_target, run_nmap, run_nuclei, run_openssl, run_ssllabs,
+    run_sslscan, run_whatweb, run_zap,
+)
 from .nvd_service import enrich_scan_with_nvd
 from .cve_data import normalize_cve_id, normalize_cve_record, nvd_url_for
 from .scan_persistence import build_stored_results, replace_scan_cves
@@ -164,13 +168,23 @@ def scan_single_site(target, is_prod=True, has_money=False, options=None, cancel
         )
         nvd_result['requested'] = True
         ensure_not_cancelled()
-    # Nuclei is intentionally disabled for the main scan pipeline.
+    # Nuclei analyse l'URL uniquement lorsque sa case est cochée. Le drapeau
+    # serveur permet encore de le couper globalement sans modifier le frontend.
+    nuclei_requested = bool(options.get('nuclei', False))
     nuclei_result = {
         'success': False,
-        'error': 'Nuclei scan disabled',
+        'error': None,
         'findings': [],
         'raw': '',
     }
+    if nuclei_requested:
+        if settings.NUCLEI_ENABLED:
+            nuclei_result = run_measured(
+                'nuclei', run_nuclei, host, port, cancel_check=cancel_check,
+            )
+            ensure_not_cancelled()
+        else:
+            nuclei_result['error'] = 'Nuclei désactivé sur le serveur'
     protocols, vulnerabilities = parse_sslscan(sslscan_result['raw'])
     source_results = {
         'sslscan': sslscan_result.get('raw', ''), 'openssl': openssl_result.get('raw', ''),
@@ -204,6 +218,8 @@ def scan_single_site(target, is_prod=True, has_money=False, options=None, cancel
         'whatweb': whatweb_result,
         'ssllabs': ssllabs_result,
     }
+    if nuclei_requested:
+        core_results['nuclei'] = nuclei_result
     scanner_errors = {
         name: result.get('error') or 'Échec sans détail'
         for name, result in core_results.items()
@@ -318,6 +334,7 @@ def scan_single_site(target, is_prod=True, has_money=False, options=None, cancel
         'tool_executions': tool_executions,
         'nuclei_findings': nuclei_findings,
         'nuclei_raw': nuclei_result.get('raw', ''),
+        'nuclei_requested': nuclei_requested,
         'nuclei_success': nuclei_result.get('success', False),
         'nuclei_error': nuclei_result.get('error'),
         'zap_findings': zap_findings,

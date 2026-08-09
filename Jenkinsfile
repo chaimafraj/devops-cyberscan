@@ -30,6 +30,7 @@ pipeline {
                     export DOCKER_GID
                     echo "Deploying with Docker socket GID ${DOCKER_GID}"
                     docker compose up --build -d
+                    docker compose exec -T worker nuclei -version
                 '''
             }
         }

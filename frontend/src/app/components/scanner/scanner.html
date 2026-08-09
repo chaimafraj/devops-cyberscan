@@ -67,6 +67,7 @@
         <div class="step ok">[ ✓ ] SSLSCAN LANCÉ</div>
         <div class="step active">[ ► ] NMAP SSL-ENUM EN COURS...</div>
         <div class="step active" *ngIf="zapRequested">[ ► ] OWASP ZAP BASELINE EN COURS...</div>
+        <div class="step active" *ngIf="nucleiRequested">[ ► ] NUCLEI WEB SCAN EN COURS...</div>
         <div class="step pending">[ · ] CVE MATCHING</div>
         <div class="step pending">[ · ] IA SCORING</div>
       </div>
@@ -137,11 +138,36 @@
           <span class="badge-ok">✓ AUCUNE ALERTE OWASP ZAP DÉTECTÉE</span>
         </div>
       </div>
+
+      <div class="result-card zap-card" *ngIf="nucleiRequested">
+        <div class="card-title">▸ NUCLEI — RÉSULTATS ({{ nucleiFindings.length }})</div>
+
+        <div class="zap-item" *ngFor="let finding of nucleiFindings" [ngClass]="'risk-' + riskClass(finding?.severity)">
+          <div class="zap-head">
+            <span class="zap-name">{{ finding?.name || finding?.template_id || 'Résultat Nuclei' }}</span>
+            <span class="zap-risk-badge" [ngClass]="'badge-' + riskClass(finding?.severity)">
+              {{ finding?.severity || 'Info' }}
+            </span>
+          </div>
+          <a class="zap-url" *ngIf="finding?.matched_at" [href]="finding?.matched_at" target="_blank" rel="noopener">
+            {{ finding?.matched_at }}
+          </a>
+          <p class="zap-desc" *ngIf="finding?.description">{{ finding?.description }}</p>
+        </div>
+
+        <div class="error-msg" *ngIf="scanResult?.nuclei_success === false && scanResult?.nuclei_error">
+          ⚠ {{ scanResult?.nuclei_error }}
+        </div>
+        <div class="no-vuln" *ngIf="nucleiFindings.length === 0 && scanResult?.nuclei_success !== false">
+          <span class="badge-ok">✓ AUCUNE VULNÉRABILITÉ NUCLEI DÉTECTÉE</span>
+        </div>
+      </div>
     </div>
 
     <div class="terminal" *ngIf="scanResult">
       <div class="terminal-header">▸ TERMINAL OUTPUT</div>
       <div class="terminal-line cmd">&gt; sslscan {{ scanResult?.domaine }}</div>
+      <div class="terminal-line cmd" *ngIf="nucleiRequested">&gt; nuclei -u https://{{ scanResult?.domaine }}</div>
       <div class="terminal-line ok">[✓] Scan terminé — Score: {{ scanResult?.score_risque_ia ?? 0 }}/10</div>
 
       <div class="terminal-line err" *ngIf="(scanResult?.vulnerabilities?.length ?? 0) > 0">

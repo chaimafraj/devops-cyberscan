@@ -26,6 +26,7 @@ def build_stored_results(result: dict[str, Any]) -> dict[str, Any]:
         "vulnerabilities": result.get("vulnerabilities", []),
         "nuclei_findings": result.get("nuclei_findings", []),
         "nuclei_raw": result.get("nuclei_raw", ""),
+        "nuclei_requested": result.get("nuclei_requested", False),
         "nuclei_success": result.get("nuclei_success", False),
         "nuclei_error": result.get("nuclei_error"),
         "whatweb": result.get("whatweb", {"success": False, "technologies": []}),

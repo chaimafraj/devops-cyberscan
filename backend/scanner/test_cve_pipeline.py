@@ -215,6 +215,47 @@ class ScannerCveEvidenceTests(SimpleTestCase):
             self.assertGreaterEqual(execution["duration_seconds"], 0)
             self.assertTrue(execution["success"])
 
+    @patch(
+        "scanner.views.run_nuclei",
+        return_value={
+            "success": True,
+            "raw": '{"template-id":"header-check"}',
+            "findings": [{
+                "template_id": "header-check",
+                "name": "Missing security header",
+                "severity": "medium",
+                "description": "Header missing",
+                "matched_at": "https://audit.example",
+            }],
+        },
+    )
+    def test_nuclei_option_runs_the_website_scanner(self, run_nuclei):
+        patches = self.scanner_patches("TLSv1.2 enabled")
+        started = [item.start() for item in patches]
+        try:
+            from .views import scan_single_site
+            result = scan_single_site(
+                "audit.example:8443",
+                is_prod=False,
+                options={
+                    "nuclei": True,
+                    "zap": False,
+                    "nvd": False,
+                    "network_metadata": False,
+                },
+            )
+        finally:
+            for item in reversed(patches):
+                item.stop()
+
+        run_nuclei.assert_called_once()
+        self.assertEqual(run_nuclei.call_args.args, ("audit.example", 8443))
+        self.assertIn("cancel_check", run_nuclei.call_args.kwargs)
+        self.assertTrue(result["nuclei_success"])
+        self.assertTrue(result["nuclei_requested"])
+        self.assertEqual(result["nuclei_findings"][0]["template_id"], "header-check")
+        self.assertIn("nuclei", result["tool_executions"])
+
     def test_sslscan_timeout_keeps_partial_scan_when_nmap_succeeds(self):
         patches = (
             patch(

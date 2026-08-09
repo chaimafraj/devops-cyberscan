@@ -6,7 +6,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { ScannerService } from '../../services/scanner.service';
 import { ToastService } from '../../services/toast.service';
 import { NotificationService } from '../../services/notification.service';
-import { ScanResponse, SiteReport, ZapFinding } from '../../models/scan.model';
+import { NucleiFinding, ScanResponse, SiteReport, ZapFinding } from '../../models/scan.model';
 
 type ScanUiStatus = 'IDLE' | 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
@@ -28,6 +28,8 @@ export class Scanner implements OnInit, OnDestroy {
   scanResult: SiteReport | null = null;
   zapFindings: ZapFinding[] = [];
   zapRequested = false;
+  nucleiFindings: NucleiFinding[] = [];
+  nucleiRequested = false;
   errorMsg = '';
   targetError = '';
   scanStatus: ScanUiStatus = 'IDLE';
@@ -45,6 +47,7 @@ export class Scanner implements OnInit, OnDestroy {
     { id: 'ssllabs', label: 'SSL LABS API', checked: false },
     { id: 'whatweb', label: 'WHATWEB', checked: false },
     { id: 'zap', label: 'OWASP ZAP Baseline', checked: false },
+    { id: 'nuclei', label: 'NUCLEI', checked: false },
     { id: 'nvd', label: 'NVD (National Vulnerability Database)', checked: true },
   ];
 
@@ -118,6 +121,7 @@ export class Scanner implements OnInit, OnDestroy {
   nouveauScan(): void {
     this.scanResult = null;
     this.zapFindings = [];
+    this.nucleiFindings = [];
     this.scanStatus = 'IDLE';
     this.errorMsg = '';
     this.cancelMessage = '';
@@ -135,6 +139,7 @@ export class Scanner implements OnInit, OnDestroy {
     this.scanStatus = 'PENDING';
     this.scanResult = null;
     this.zapFindings = [];
+    this.nucleiFindings = [];
     this.errorMsg = '';
 
     const options = this.options.reduce(
@@ -146,6 +151,7 @@ export class Scanner implements OnInit, OnDestroy {
     );
 
     this.zapRequested = options['zap'] ?? false;
+    this.nucleiRequested = options['nuclei'] ?? false;
 
     this.scannerService.demarrerScan(target, options).subscribe({
       next: (result: ScanResponse) => {
@@ -252,6 +258,7 @@ export class Scanner implements OnInit, OnDestroy {
     }
 
     this.zapFindings = this.extraireZapFindings(result, this.scanResult);
+    this.nucleiFindings = this.extraireNucleiFindings(result, this.scanResult);
     if (notify) {
       this.toastService.success(`Scan terminé pour ${target}`);
       this.notifService.fetchUnreadCount();
@@ -277,6 +284,10 @@ export class Scanner implements OnInit, OnDestroy {
   // Cherche zap_findings dans la réponse racine puis dans le rapport site
   private extraireZapFindings(root: ScanResponse, site: SiteReport | null): ZapFinding[] {
     const findings = root?.zap_findings ?? site?.zap_findings ?? [];
+    return Array.isArray(findings) ? findings : [];
+  }
+  private extraireNucleiFindings(root: ScanResponse, site: SiteReport | null): NucleiFinding[] {
+    const findings = root?.['nuclei_findings'] ?? site?.nuclei_findings ?? [];
     return Array.isArray(findings) ? findings : [];
   }
   // Normalise le niveau de risque pour le style CSS (high / medium / low / info)

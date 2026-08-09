@@ -24,7 +24,13 @@ pipeline {
 
         stage('Deploy application') {
             steps {
-                sh 'docker compose up --build -d'
+                sh '''
+                    test -S /var/run/docker.sock
+                    DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
+                    export DOCKER_GID
+                    echo "Deploying with Docker socket GID ${DOCKER_GID}"
+                    docker compose up --build -d
+                '''
             }
         }
     }

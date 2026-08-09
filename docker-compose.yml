@@ -116,6 +116,9 @@ services:
 
   worker:
     image: cyberscan-backend
+    # Start directly as the application user so Docker's supplemental
+    # socket group from group_add is retained by the Celery process.
+    user: cyberscan
     environment: *backend-environment
     command: [celery, -A, backend, worker, --loglevel=INFO]
     volumes:

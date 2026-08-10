@@ -44,4 +44,16 @@ describe('ScannerService', () => {
     expect(request.request.responseType).toBe('blob');
     request.flush(new Blob(['<svg></svg>'], { type: 'image/svg+xml' }));
   });
+
+  it('can force regeneration before downloading a PDF report', () => {
+    service.downloadRapportPdf(176, true).subscribe();
+
+    const request = http.expectOne((candidate) =>
+      candidate.url === '/api/scans/176/rapport/download/' &&
+      candidate.params.get('force_regenerate') === 'true',
+    );
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['pdf'], { type: 'application/pdf' }));
+  });
 });

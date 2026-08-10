@@ -335,6 +335,52 @@
             </div>
           </section>
 
+          <section class="detail-card nuclei-results-card">
+            <div class="section-heading">
+              <span class="section-icon">N</span>
+              <div>
+                <span class="section-eyebrow">ANALYSE PAR SIGNATURES</span>
+                <h3>Vuln&eacute;rabilit&eacute;s d&eacute;tect&eacute;es avec Nuclei</h3>
+              </div>
+              <span class="count-pill">{{ selectedScan.nucleiFindingsUi?.length || 0 }}</span>
+            </div>
+
+            @if (selectedScan.resultats_ssl?.nuclei_requested) {
+              <div class="nuclei-status" [attr.data-state]="selectedScan.resultats_ssl?.nuclei_success ? 'completed' : 'failed'">
+                <span class="tool-dot" [attr.data-state]="selectedScan.resultats_ssl?.nuclei_success ? 'completed' : 'failed'"></span>
+                <strong>{{ selectedScan.resultats_ssl?.nuclei_success ? 'Scan Nuclei termin&eacute;' : 'Scan Nuclei en &eacute;chec' }}</strong>
+                @if (selectedScan.resultats_ssl?.nuclei_error) {
+                  <span>{{ selectedScan.resultats_ssl.nuclei_error }}</span>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">Nuclei n'a pas &eacute;t&eacute; demand&eacute; pour ce scan.</div>
+            }
+
+            <div class="nuclei-findings-grid">
+              @for (finding of selectedScan.nucleiFindingsUi; track finding.templateId + finding.target) {
+                <article class="nuclei-finding" [attr.data-severity]="finding.severityKey">
+                  <header>
+                    <div>
+                      <span class="nuclei-template">{{ finding.templateId }}</span>
+                      <h4>{{ finding.displayName }}</h4>
+                    </div>
+                    <span class="nuclei-severity" [attr.data-severity]="finding.severityKey">{{ finding.severityLabel }}</span>
+                  </header>
+                  <dl>
+                    <div><dt>Cible</dt><dd>{{ finding.target }}</dd></div>
+                    <div><dt>Description</dt><dd>{{ finding.description || 'Description non transmise par le template.' }}</dd></div>
+                    <div><dt>Rem&eacute;diation</dt><dd>{{ finding.remediation }}</dd></div>
+                  </dl>
+                </article>
+              } @empty {
+                @if (selectedScan.resultats_ssl?.nuclei_requested && selectedScan.resultats_ssl?.nuclei_success) {
+                  <div class="empty-state success-empty">Aucune vuln&eacute;rabilit&eacute; Nuclei d&eacute;tect&eacute;e.</div>
+                }
+              }
+            </div>
+          </section>
+
           <section class="detail-card tls-card">
             <div class="section-heading">
               <span class="section-icon">TLS</span>
@@ -497,7 +543,7 @@
                   <span class="severity-bar" [attr.data-severity]="finding.severityKey"></span>
                   <div class="finding-main">
                     <strong>{{ finding.name }}</strong>
-                    <span>{{ finding.cve || (finding.manual ? 'MANUELLE' : 'TECHNIQUE') }}</span>
+                    <span>{{ finding.cve || finding.source || (finding.manual ? 'MANUELLE' : 'TECHNIQUE') }}</span>
                   </div>
                   <span class="finding-priority">{{ finding.priority }}</span>
                   <span class="finding-cvss">{{ finding.score ?? 'N/A' }}</span>
@@ -527,6 +573,9 @@
                 }
                 @if (selectedScan.resultats_ssl?.sslscan) {
                   <details class="raw-report"><summary>SSLScan</summary><pre>{{ selectedScan.resultats_ssl.sslscan }}</pre></details>
+                }
+                @if (selectedScan.resultats_ssl?.nuclei_raw) {
+                  <details class="raw-report"><summary>Nuclei</summary><pre>{{ selectedScan.resultats_ssl.nuclei_raw }}</pre></details>
                 }
               </div>
             </details>

@@ -249,7 +249,7 @@ class Historique implements OnInit, OnDestroy {
     scan.rapportStatus = 'generation';
     this.refreshScanRow(scan);
 
-    this.scannerService.downloadRapportPdf(scan.id).subscribe({
+    this.scannerService.downloadRapportPdf(scan.id, true).subscribe({
       next: (blob) => {
         scan.pdfGenerating = false;
 
@@ -329,7 +329,7 @@ class Historique implements OnInit, OnDestroy {
     scan.emailStatus = 'envoi';
     this.refreshScanRow(scan);
 
-    this.scannerService.sendRapportEmail(scan.id).subscribe({
+    this.scannerService.sendRapportEmail(scan.id, undefined, true).subscribe({
       next: (res) => {
         scan.emailSending = false;
         scan.emailStatus = 'envoye';
@@ -567,6 +567,7 @@ class Historique implements OnInit, OnDestroy {
       protocolsUi: protocols,
       technologiesUi: technologies,
       toolsUi: tools,
+      nucleiFindingsUi: this.buildNucleiFindings(results.nuclei_findings ?? []),
       timelineUi: timeline,
       allFindings: findings,
       primaryFinding,
@@ -601,6 +602,7 @@ class Historique implements OnInit, OnDestroy {
 
     for (const cve of scan?.cves ?? []) {
       add({
+        source: 'CVE',
         name: cve.produit_concerne || cve.cve_id,
         cve: cve.cve_id,
         score: cve.cvss_score,
@@ -613,6 +615,7 @@ class Historique implements OnInit, OnDestroy {
     }
     for (const cve of results.nvd_cves ?? []) {
       add({
+        source: 'NVD',
         name: cve.produit_concerne || cve.cve_id || cve.id,
         cve: cve.cve_id || cve.id,
         score: cve.cvss_score ?? cve.cvssScore ?? cve.score,
@@ -626,6 +629,7 @@ class Historique implements OnInit, OnDestroy {
     for (const finding of results.zap_findings ?? []) {
       const mappedScore = finding.cvss_score ?? this.scoreFromSeverity(finding.risk);
       add({
+        source: 'OWASP ZAP',
         name: finding.name || 'Alerte OWASP ZAP',
         cve: finding.cve_id ?? null,
         score: mappedScore,
@@ -639,6 +643,7 @@ class Historique implements OnInit, OnDestroy {
     for (const finding of results.nuclei_findings ?? []) {
       const mappedScore = finding.cvss_score ?? this.scoreFromSeverity(finding.severity);
       add({
+        source: 'NUCLEI',
         name: finding.name || finding.template_id || 'Constat Nuclei',
         cve: String(finding.template_id ?? '').startsWith('CVE-') ? finding.template_id : null,
         score: mappedScore,
@@ -651,6 +656,7 @@ class Historique implements OnInit, OnDestroy {
     }
     for (const vulnerability of results.vulnerabilities ?? []) {
       add({
+        source: 'SSL/TLS',
         name: String(vulnerability),
         cve: null,
         score: null,
@@ -663,6 +669,7 @@ class Historique implements OnInit, OnDestroy {
     }
     for (const manual of this.vulnsManuelles ?? []) {
       add({
+        source: 'MANUELLE',
         name: manual.nom,
         cve: null,
         score: manual.cvss_score,
@@ -676,6 +683,22 @@ class Historique implements OnInit, OnDestroy {
       });
     }
     return findings;
+  }
+
+  private buildNucleiFindings(findings: any[]): any[] {
+    return (findings ?? []).map((finding: any) => {
+      const score = finding.cvss_score ?? this.scoreFromSeverity(finding.severity);
+      return {
+        ...finding,
+        templateId: finding.template_id || 'Template non transmis',
+        displayName: finding.name || finding.template_id || 'Constat Nuclei',
+        severityKey: this.severityKey(finding.severity, score),
+        severityLabel: String(finding.severity || 'info').toUpperCase(),
+        target: finding.matched_at || 'Cible non transmise',
+        remediation: finding.remediation ||
+          'Valider le constat, corriger le composant ou la configuration concernée, puis relancer ce template Nuclei.',
+      };
+    });
   }
 
   private buildToolResults(results: any): any[] {
@@ -780,6 +803,7 @@ class Historique implements OnInit, OnDestroy {
     if (value.includes('high') || value.includes('\u00e9lev') || (score != null && score >= 7)) return 'high';
     if (value.includes('medium') || value.includes('moyen') || (score != null && score >= 4)) return 'medium';
     if (value.includes('low') || value.includes('faible') || score != null) return 'low';
+    if (value.includes('info')) return 'info';
     return 'unknown';
   }
 
@@ -793,6 +817,7 @@ class Historique implements OnInit, OnDestroy {
   }
 
   private priorityLabel(score: any): string {
+    if (score == null || score === '') return '\u00c0 qualifier';
     const value = Number(score);
     if (!Number.isFinite(value)) return '\u00c0 qualifier';
     if (value >= 9) return 'P1 - Imm\u00e9diate';

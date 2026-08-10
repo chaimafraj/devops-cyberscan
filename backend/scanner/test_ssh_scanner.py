@@ -115,7 +115,10 @@ class RunNucleiTests(SimpleTestCase):
     def test_scans_website_with_local_nuclei_command_and_parses_jsonl(self, run_command):
         run_command.return_value = (
             '{"template-id":"CVE-2026-12345","info":{"name":"Example issue",'
-            '"severity":"high","description":"Detected issue"},'
+            '"severity":"high","description":"Detected issue",'
+            '"remediation":"Upgrade the affected component",'
+            '"tags":["cve","rce"],"reference":["https://example.test/advisory"],'
+            '"classification":{"cve-id":["CVE-2026-12345"],"cvss-score":9.8}},'
             '"matched-at":"https://audit.example/login"}\n',
             '',
             0,
@@ -126,9 +129,13 @@ class RunNucleiTests(SimpleTestCase):
         self.assertTrue(result['success'])
         self.assertEqual(result['findings'][0]['template_id'], 'CVE-2026-12345')
         self.assertEqual(result['findings'][0]['severity'], 'high')
+        self.assertEqual(result['findings'][0]['remediation'], 'Upgrade the affected component')
+        self.assertEqual(result['findings'][0]['cve_id'], 'CVE-2026-12345')
+        self.assertEqual(result['findings'][0]['cvss_score'], 9.8)
         command = run_command.call_args.args[0]
         self.assertIn('nuclei -u https://audit.example:8443', command)
         self.assertIn('-jsonl', command)
+        self.assertIn('-severity info,low,medium,high,critical', command)
 
     @patch('scanner.ssh_scanner._run_local_command', side_effect=ScanCancelled('cancelled'))
     def test_propagates_cancellation_to_running_command(self, run_command):

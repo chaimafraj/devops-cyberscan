@@ -65,9 +65,10 @@ export class ScannerService {
   }
 
   /** Téléchargement binaire du PDF */
-  downloadRapportPdf(scanId: number): Observable<Blob> {
+  downloadRapportPdf(scanId: number, forceRegenerate = false): Observable<Blob> {
     return this.http.get(`${environment.API_BASE_URL}/scans/${scanId}/rapport/download/`, {
       responseType: 'blob',
+      params: forceRegenerate ? { force_regenerate: 'true' } : {},
     });
   }
 
@@ -79,8 +80,10 @@ export class ScannerService {
     );
   }
   /** Envoi / renvoi du rapport par email (PDF en pièce jointe) */
-  sendRapportEmail(scanId: number, email?: string): Observable<any> {
+  sendRapportEmail(scanId: number, email?: string, forceRegenerate = false): Observable<any> {
     const body = email ? { email } : {};
-    return this.http.post(`${environment.API_BASE_URL}/scans/${scanId}/rapport/email/`, body);
+    return this.http.post(`${environment.API_BASE_URL}/scans/${scanId}/rapport/email/`, body, {
+      params: forceRegenerate ? { force_regenerate: 'true' } : {},
+    });
   }
 }

@@ -474,12 +474,25 @@ def _build_findings(scan, results):
 
     for nucleus in results.get('nuclei_findings') or []:
         severity = str(nucleus.get('severity', '')).lower()
-        score = {'critical': 9.5, 'high': 8.0, 'medium': 5.0}.get(severity, 0)
+        reported_score = nucleus.get('cvss_score')
+        try:
+            score = float(reported_score) if reported_score is not None else 0
+        except (TypeError, ValueError):
+            score = 0
+        score = score or {'critical': 9.5, 'high': 8.0, 'medium': 5.0}.get(severity, 0)
         if score < 4:
             continue
         component = nucleus.get('name') or nucleus.get('template_id') or 'Composant obsolète'
-        evidence = nucleus.get('matched_at') or nucleus.get('url') or str(nucleus)[:600]
-        findings.append(_finding(component, evidence, 'Technique', nucleus.get('url') or scan.domaine, score, REMEDIATION_TEMPLATES['obsolete_software'], nucleus.get('template_id', '')))
+        target = nucleus.get('matched_at') or nucleus.get('url') or scan.domaine
+        evidence = f"Template Nuclei : {nucleus.get('template_id') or 'non transmis'}\nCible : {target}"
+        remediation = dict(REMEDIATION_TEMPLATES['obsolete_software'])
+        if nucleus.get('remediation'):
+            remediation['recommendation'] = str(nucleus['remediation'])
+        findings.append(_finding(
+            component, evidence, 'Nuclei', target, score, remediation,
+            nucleus.get('cve_id') or nucleus.get('template_id', ''),
+            nucleus.get('description', ''),
+        ))
 
     nmap = _clean_raw(results.get('nmap'))
     ports = sorted({int(value) for value in re.findall(r'(?m)^\s*(\d+)/tcp\s+open\b', nmap)})
@@ -553,6 +566,53 @@ def _cell(value, styles, bold=False):
 def _table_recommendation(text, styles):
     recommendation_style = styles['CSBody'].clone('CSTableRecommendation', spaceBefore=8)
     return Paragraph(f'<b>Recommandation :</b> {_escape(text)}', recommendation_style)
+
+
+def _nuclei_result_flowables(results, styles):
+    findings = results.get('nuclei_findings') or []
+    requested = results.get('nuclei_requested') is True
+    success = results.get('nuclei_success') is True
+    error = results.get('nuclei_error')
+    if not requested and not findings:
+        return [Paragraph('Nuclei n’a pas été demandé pour ce scan.', styles['CSBody'])]
+
+    status = 'Terminé' if success else 'Échec'
+    if findings and not success:
+        status = 'Résultats partiels'
+    summary = f"Statut : {status} — {len(findings)} constat(s) détecté(s)."
+    flowables = [Paragraph(_escape(summary), styles['CSBody'])]
+    if error:
+        flowables.append(Paragraph(f'<b>Erreur :</b> {_escape(error)}', styles['CSBody']))
+
+    rows = [[
+        _cell('Template / constat', styles, True),
+        _cell('Sévérité', styles, True),
+        _cell('Cible et description', styles, True),
+        _cell('Remédiation', styles, True),
+    ]]
+    for finding in findings:
+        template_id = finding.get('template_id') or 'Template non transmis'
+        name = finding.get('name') or 'Constat Nuclei'
+        target = finding.get('matched_at') or 'Cible non transmise'
+        description = finding.get('description') or 'Description non transmise par le template.'
+        remediation = finding.get('remediation') or (
+            'Valider le constat, corriger le composant ou la configuration concernée, '
+            'puis relancer ce template Nuclei.'
+        )
+        rows.append([
+            _cell(f'{template_id}\n{name}', styles),
+            _cell(str(finding.get('severity') or 'info').upper(), styles),
+            _cell(f'{target}\n{description}', styles),
+            _cell(remediation, styles),
+        ])
+    if not findings:
+        rows.append([
+            _cell('—', styles), _cell('—', styles),
+            _cell('Aucune vulnérabilité Nuclei détectée.', styles),
+            _cell('Maintenir les templates à jour et relancer Nuclei périodiquement.', styles),
+        ])
+    flowables.append(_table(rows, [3.6*cm, 2.0*cm, 6.0*cm, 5.1*cm], styles))
+    return flowables
 
 
 def _link_cell(url, styles, label='Fiche NVD'):
@@ -786,6 +846,8 @@ def generate_fixed_pdf_for_scan(scan, force_regenerate=False):
     story.append(_toc_heading('2. Méthodologie', styles))
     for tool in active_tools:
         story.append(Paragraph(f'<b>{_escape(tool)}</b> — {_escape(TOOL_DESCRIPTIONS.get(tool, "Résultat technique enregistré"))}', styles['CSBullet']))
+    story.append(Paragraph('Résultats du scan Nuclei', styles['CSHeading']))
+    story.extend(_nuclei_result_flowables(results, styles))
 
     story.extend([
         _toc_heading('3. Inventaire technique', styles),

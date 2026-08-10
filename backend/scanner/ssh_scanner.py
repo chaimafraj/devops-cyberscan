@@ -259,6 +259,31 @@ def run_ssllabs(target):
 
 
 def run_nuclei(target, port=None, cancel_check=None):
+    def normalize_finding(finding):
+        info = finding.get('info') if isinstance(finding.get('info'), dict) else {}
+        classification = info.get('classification') if isinstance(info.get('classification'), dict) else {}
+        references = info.get('reference') or []
+        if isinstance(references, str):
+            references = [references]
+        tags = info.get('tags') or []
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(',') if tag.strip()]
+        return {
+            'template_id': finding.get('template-id', ''),
+            'name': info.get('name', ''),
+            'severity': str(info.get('severity') or 'info').lower(),
+            'description': info.get('description', ''),
+            'remediation': info.get('remediation', ''),
+            'matched_at': finding.get('matched-at') or finding.get('host', ''),
+            'type': finding.get('type', ''),
+            'tags': tags,
+            'references': references,
+            'cve_id': (classification.get('cve-id') or [None])[0]
+            if isinstance(classification.get('cve-id'), list)
+            else classification.get('cve-id'),
+            'cvss_score': classification.get('cvss-score'),
+        }
+
     def parse_nuclei_output(output):
         findings = []
 
@@ -273,13 +298,7 @@ def run_nuclei(target, port=None, cancel_check=None):
                 for finding in parsed_output:
                     if not isinstance(finding, dict):
                         continue
-                    findings.append({
-                        'template_id': finding.get('template-id', ''),
-                        'name': finding.get('info', {}).get('name', ''),
-                        'severity': finding.get('info', {}).get('severity', 'info').lower(),
-                        'description': finding.get('info', {}).get('description', ''),
-                        'matched_at': finding.get('matched-at') or finding.get('host', ''),
-                    })
+                    findings.append(normalize_finding(finding))
                 return findings
         except (TypeError, json.JSONDecodeError):
             pass
@@ -291,13 +310,7 @@ def run_nuclei(target, port=None, cancel_check=None):
 
             try:
                 finding = json.loads(line)
-                findings.append({
-                    'template_id': finding.get('template-id', ''),
-                    'name': finding.get('info', {}).get('name', ''),
-                    'severity': finding.get('info', {}).get('severity', 'info'),
-                    'description': finding.get('info', {}).get('description', ''),
-                    'matched_at': finding.get('matched-at') or finding.get('host', ''),
-                })
+                findings.append(normalize_finding(finding))
                 continue
             except json.JSONDecodeError:
                 pass
@@ -313,7 +326,13 @@ def run_nuclei(target, port=None, cancel_check=None):
                     'name': template_id.replace('-', ' ').title(),
                     'severity': match.group('severity').lower(),
                     'description': line,
+                    'remediation': '',
                     'matched_at': match.group('matched').strip(),
+                    'type': 'http',
+                    'tags': [],
+                    'references': [],
+                    'cve_id': template_id if re.fullmatch(r'CVE-\d{4}-\d{4,}', template_id, re.I) else None,
+                    'cvss_score': None,
                 })
 
         return findings
@@ -333,7 +352,10 @@ def run_nuclei(target, port=None, cancel_check=None):
         base_command = (
             f"timeout 90s nuclei -u {quoted_url} -silent -timeout 5 -no-color "
             f"-t http/technologies/tech-detect.yaml,http/exposures/,http/cves/ "
-            f"-severity critical,high,medium -rate-limit 100 -c 25"
+            # Conserver aussi les niveaux info/low : les templates de détection
+            # technologique (comme tech-detect) les utilisent et ces constats
+            # doivent rester visibles dans le détail et dans le rapport PDF.
+            f"-severity info,low,medium,high,critical -rate-limit 100 -c 25"
         )
 
         raw_output, err, exit_status = _run_local_command(

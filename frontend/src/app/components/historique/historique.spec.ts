@@ -121,6 +121,16 @@ describe('Historique', () => {
             completed_at: '2026-08-03T10:00:01Z',
           },
         },
+        nuclei_requested: true,
+        nuclei_success: true,
+        nuclei_findings: [{
+          template_id: 'exposed-admin-panel',
+          name: 'Exposed administration panel',
+          severity: 'high',
+          description: 'Administration panel reachable from the Internet.',
+          matched_at: 'https://audit.example/admin',
+          remediation: 'Restrict access to trusted networks.',
+        }],
       },
     });
     manualRequest.flush([]);
@@ -133,6 +143,10 @@ describe('Historique', () => {
     expect(component.selectedScan.technologiesUi[0].name).toBe('Django');
     expect(component.selectedScan.toolsUi.find((tool: any) => tool.key === 'sslscan').statusKey)
       .toBe('completed');
+    expect(component.selectedScan.nucleiFindingsUi[0].templateId).toBe('exposed-admin-panel');
+    expect(component.selectedScan.nucleiFindingsUi[0].target).toBe('https://audit.example/admin');
+    expect(component.selectedScan.allFindings.some((finding: any) => finding.source === 'NUCLEI'))
+      .toBe(true);
   });
   it('should refresh paginator bindings after the scans response', () => {
     component.loadScans();

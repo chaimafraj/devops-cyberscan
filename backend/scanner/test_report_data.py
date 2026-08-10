@@ -102,6 +102,27 @@ class ReportDataTests(SimpleTestCase):
         self.assertEqual(sum(item["source_id"] == "CVE-2026-0001" for item in findings), 1)
         self.assertEqual(len(findings), 1)
 
+    def test_nuclei_finding_is_included_with_its_evidence_and_remediation(self):
+        scan = SimpleNamespace(domaine="audit.example", cves=FakeCveManager([]))
+        results = dict(self.results)
+        results["nvd_cves"] = []
+        results["nuclei_findings"] = [{
+            "template_id": "http-misconfiguration",
+            "name": "Exposed administration panel",
+            "severity": "high",
+            "description": "An administration panel is publicly reachable.",
+            "matched_at": "https://audit.example/admin",
+            "remediation": "Restrict access to trusted networks.",
+        }]
+
+        findings = _build_findings(scan, normalize_results(results))
+        nucleus = next(item for item in findings if item["type"] == "Nuclei")
+
+        self.assertEqual(nucleus["source_id"], "http-misconfiguration")
+        self.assertIn("https://audit.example/admin", nucleus["evidence"])
+        self.assertEqual(nucleus["description"], "An administration panel is publicly reachable.")
+        self.assertEqual(nucleus["recommendation"], "Restrict access to trusted networks.")
+
     def test_risk_levels_use_one_consistent_scale(self):
         self.assertEqual(risk_level_from_score(3.9)[0], "Faible")
         self.assertEqual(risk_level_from_score(4)[0], "Moyen")

@@ -272,6 +272,7 @@ def _build_executive_summary(scan: Scan, resultats: dict, cves, security_score: 
     protocols = resultats.get('protocols') or []
     vulns = resultats.get('vulnerabilities') or []
     zap = resultats.get('zap_findings') or []
+    nuclei = resultats.get('nuclei_findings') or []
     whatweb = (resultats.get('whatweb') or {}).get('technologies') or []
     nvd_count = (resultats.get('nvd') or {}).get('cves_count', 0) or len(resultats.get('nvd_cves') or [])
 
@@ -284,7 +285,8 @@ def _build_executive_summary(scan: Scan, resultats: dict, cves, security_score: 
         f"(score de risque IA : {scan.score_risque_ia}/10).",
         f"Synthèse : {n_cves} CVE référencée(s), {len(vulns)} indicateur(s) SSL/TLS, "
         f"{len(protocols)} protocole(s) détecté(s), {len(whatweb)} technologie(s) web, "
-        f"{len(zap)} alerte(s) OWASP ZAP, {nvd_count} résultat(s) NVD.",
+        f"{len(zap)} alerte(s) OWASP ZAP, {len(nuclei)} constat(s) Nuclei, "
+        f"{nvd_count} résultat(s) NVD.",
     ]
     if scan.score_risque_ia >= 7:
         parts.append(
@@ -336,6 +338,24 @@ def _build_remediation_plan(scan: Scan, resultats: dict, recommendations: List[s
                 'action': sol[:500] if sol else 'Corriger selon les recommandations OWASP ZAP.',
             })
 
+    for finding in resultats.get('nuclei_findings') or []:
+        severity = str(finding.get('severity') or '').lower()
+        if severity not in ('critical', 'high', 'medium'):
+            continue
+        priorite = {
+            'critical': 'Immédiate (P1)',
+            'high': 'Immédiate (P1)',
+            'medium': 'Court terme (P2)',
+        }[severity]
+        plan.append({
+            'priorite': priorite,
+            'element': finding.get('template_id') or finding.get('name') or 'Constat Nuclei',
+            'action': (finding.get('remediation') or (
+                'Valider le constat Nuclei, corriger le composant ou la configuration concernée, '
+                'puis relancer le template pour confirmer la remédiation.'
+            ))[:500],
+        })
+
     for vuln in resultats.get('vulnerabilities') or []:
         if vuln in ('TLSv1.0', 'TLSv1.1', 'WEAK_CIPHER'):
             plan.append({
@@ -376,6 +396,12 @@ def _collect_recommendations(scan: Scan, resultats: dict) -> List[str]:
         if sol and sol not in seen:
             seen.add(sol)
             recs.append(f"[ZAP — {name}] {sol}")
+    for finding in resultats.get('nuclei_findings') or []:
+        remediation = (finding.get('remediation') or '').strip()
+        if remediation and remediation not in seen:
+            seen.add(remediation)
+            name = finding.get('template_id') or finding.get('name') or 'Nuclei'
+            recs.append(f"[Nuclei — {name}] {remediation}")
 
     vulns = resultats.get('vulnerabilities') or []
     if 'TLSv1.0' in vulns or 'TLSv1.1' in vulns:
@@ -506,6 +532,10 @@ def build_report_context(scan: Scan) -> Dict[str, Any]:
         'zap_findings': resultats.get('zap_findings') or [],
         'zap_success': resultats.get('zap_success'),
         'zap_error': resultats.get('zap_error'),
+        'nuclei_findings': resultats.get('nuclei_findings') or [],
+        'nuclei_requested': resultats.get('nuclei_requested', False),
+        'nuclei_success': resultats.get('nuclei_success'),
+        'nuclei_error': resultats.get('nuclei_error'),
         'ssllabs': resultats.get('ssllabs') or resultats.get('ssl_labs') or {},
         'nvd': resultats.get('nvd') or {},
         'nvd_cves': resultats.get('nvd_cves') or [],
@@ -532,6 +562,7 @@ def build_json_export(scan: Scan) -> Dict[str, Any]:
         'vulnerabilites': context.get('vulnerabilities') or [],
         'technologies': ww.get('technologies') or [],
         'cve': context.get('cves') or [],
+        'vulnerabilites_nuclei': context.get('nuclei_findings') or [],
         'recommandations': context.get('recommandations') or [],
         'outils_utilises': context.get('outils_utilises') or [],
     }

@@ -142,9 +142,9 @@ def run_openssl(target, port=None):
         endpoint = shlex.quote(f'{target}:{int(connect_port)}')
         server_name = shlex.quote(target)
         result, err, _ = _run_local_command(
-            f"timeout 10 openssl s_client -connect {endpoint} "
+            f"timeout 180s openssl s_client -connect {endpoint} "
             f"-servername {server_name} </dev/null",
-            timeout=15,
+            timeout=200,
         )
         result += err
 
@@ -496,7 +496,7 @@ def _strip_html(text):
 ZAP_IMAGE = "ghcr.io/zaproxy/zaproxy:stable"
 
 
-def run_zap(target, timeout=600, port=None, cancel_check=None):
+def run_zap(target, timeout=1000, port=None, cancel_check=None):
     """Scan web passif avec OWASP ZAP via le Docker local du serveur.
 
     Le scan baseline lance un spider puis un scan passif, puis exporte un

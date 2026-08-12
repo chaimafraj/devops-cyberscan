@@ -121,12 +121,29 @@ def _find_manual_vulnerability(facts, name):
     )
 
 
+def _protocol_key(value):
+    normalized = re.sub(r'\s+', '', (value or '').casefold())
+    return normalized.replace('tlsv', 'tls')
+
+
+def _protocols_in_text(text, facts):
+    normalized = _protocol_key(text)
+    matches = []
+    seen = set()
+    for protocol in facts.get('protocols') or []:
+        key = _protocol_key(protocol)
+        if key and key in normalized and key not in seen:
+            matches.append(protocol)
+            seen.add(key)
+    return matches
+
+
 def _is_followup_reference(question):
     return bool(_FOLLOWUP_REFERENCE_RE.search(question or ''))
 
 
 def _last_finding_from_history(history, facts):
-    """Retourne la dernière CVE/vulnérabilité de l'historique présente dans facts."""
+    """Retourne la dernière CVE/vulnérabilité/protocole de l'historique présente dans facts."""
     if not history:
         return None
 
@@ -144,16 +161,21 @@ def _last_finding_from_history(history, facts):
         for name in known_vulns:
             if name.casefold() in line_cf:
                 return {'type': 'vulnerability', 'name': name}
+
+        protocols = _protocols_in_text(line, facts)
+        if protocols:
+            return {'type': 'protocols', 'names': protocols}
     return None
 
 
 def resolve_conversation_target(question, history, facts):
-    """Identifie explicitement l'entité (CVE/vuln) visée par la question.
+    """Identifie explicitement l'entité (CVE/vuln/protocole) visée par la question.
 
     Priorité :
     1. CVE explicite dans la question (si présente dans facts)
     2. Vulnérabilité manuelle explicite dans la question
-    3-5. Référence conversationnelle → dernière entité fiable de l'historique
+    3. Protocole faible explicite dans la question
+    4-6. Référence conversationnelle → dernière entité fiable de l'historique
     6. None si aucune cible fiable
     """
     question = question or ''
@@ -171,6 +193,10 @@ def resolve_conversation_target(question, history, facts):
         name = item.get('name') or ''
         if name and name.casefold() in question_cf:
             return {'type': 'vulnerability', 'name': name}
+
+    protocols = _protocols_in_text(question, facts)
+    if protocols:
+        return {'type': 'protocols', 'names': protocols}
 
     if not _is_followup_reference(question):
         return None
@@ -277,6 +303,35 @@ def _answer_about_vulnerability(question, vuln):
     )
 
 
+def _answer_about_protocols(question, protocols, facts):
+    normalized = (question or '').casefold()
+    domain = facts['domain'] if re.fullmatch(r'[A-Za-z0-9.-]{1,253}', facts['domain'] or '') else '<domaine-du-scan>'
+    detected = ', '.join(protocols or facts.get('protocols') or []) or 'TLS obsolète'
+    correction = (
+        "Désactivez TLS 1.0 et TLS 1.1 sur le serveur, conservez TLS 1.2 et TLS 1.3, "
+        "supprimez les suites de chiffrement faibles, redémarrez le service puis vérifiez avec : "
+        f"nmap --script ssl-enum-ciphers -p 443 {domain}"
+    )
+    risk = (
+        f"{detected} représente un risque pour ce serveur car ces versions TLS sont obsolètes : "
+        "elles peuvent permettre une négociation dégradée, exposer les échanges à des attaques connues "
+        "et affaiblir la confidentialité des communications sur le port HTTPS."
+    )
+    correction_terms = (
+        'corrig', 'correctif', 'corrective', 'remédi', 'remedi',
+        'solution', 'recommand', 'résoudre', 'resoudre', 'fixer',
+    )
+    why_terms = ('pourquoi', 'critique', 'prioritaire', 'grave', 'dangereuse', 'dangereux', 'risque')
+
+    if any(term in normalized for term in correction_terms) and any(term in normalized for term in why_terms):
+        return f"{risk} Correction : {correction}"
+    if any(term in normalized for term in correction_terms):
+        return f"Le scan a détecté : {detected}. {correction}"
+    if any(term in normalized for term in why_terms):
+        return f"{risk} Correction recommandée : {correction}"
+    return f"Le scan a détecté : {detected}. {risk} Correction recommandée : {correction}"
+
+
 def _answer_for_resolved_target(question, target, facts):
     if target is None:
         return None
@@ -295,6 +350,8 @@ def _answer_for_resolved_target(question, target, facts):
         if vuln is None:
             return _UNRESOLVED_CVE_MESSAGE
         return _answer_about_vulnerability(question, vuln)
+    if target.get('type') == 'protocols':
+        return _answer_about_protocols(question, target.get('names') or [], facts)
     return None
 
 

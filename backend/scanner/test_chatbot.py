@@ -243,6 +243,51 @@ class ChatbotApiTests(APITestCase):
         self.assertNotIn('La priorité est de traiter', response.data['answer'])
 
     @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_tls_followups_resolve_previous_protocol_context(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
+        first = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Pourquoi TLS 1.0 représente-t-il un risque pour ce serveur et comment puis-je le corriger ?',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertIn('TLSv1.0', first.data['answer'])
+        self.assertIn('représente un risque', first.data['answer'])
+        self.assertIn('Désactivez TLS 1.0 et TLS 1.1', first.data['answer'])
+
+        why = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Pourquoi cette vulnérabilité est critique ?',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(why.status_code, 200)
+        self.assertIn('TLSv1.0', why.data['answer'])
+        self.assertIn('versions TLS sont obsolètes', why.data['answer'])
+        self.assertNotIn('Je ne peux pas déterminer', why.data['answer'])
+
+        correction = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Comment la corriger ?',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(correction.status_code, 200)
+        self.assertIn('Désactivez TLS 1.0 et TLS 1.1', correction.data['answer'])
+        self.assertIn('nmap --script ssl-enum-ciphers', correction.data['answer'])
+        self.assertNotIn('Je ne peux pas déterminer', correction.data['answer'])
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
     def test_follow_up_risks_lists_scan_findings(self, _get_chatbot):
         conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
         ChatMessage.objects.create(

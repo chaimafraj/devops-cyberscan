@@ -23,6 +23,28 @@ _chatbot_lock = threading.Lock()
 _CVE_RE = re.compile(r'\bCVE-\d{4}-\d{4,}\b', re.IGNORECASE)
 _REPORT_TERMS = ('rapport complet', 'rapport d’analyse', "rapport d'analyse", 'présente le scan')
 _DOMAIN_RE = re.compile(r'(?<![@\w-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\b', re.IGNORECASE)
+_FOLLOWUP_REFERENCE_RE = re.compile(
+    r'(?i)(?:'
+    r'\bcette\s+(?:cve|vuln[eé]rabilit[eé]|faille|menace)\b|'
+    r'\bce\s+probl[eè]me\b|'
+    r'\bla\s+corriger\b|'
+    r'\bla\s+r[eé]soudre\b|'
+    r'\bcomment\s+(?:la|le)\s+(?:corriger|r[eé]soudre|fixer)\b|'
+    r'\bpourquoi\s+(?:est[- ]elle|elle\s+est|cette)\b|'
+    r'\b(?:quel|quelle)\s+est\s+(?:son|sa)\b|'
+    r'\bquelle\s+recommandation\b|'
+    r'\bson\s+impact\b|'
+    r'\bsa\s+(?:s[eé]v[eé]rit[eé]|recommandation|description|gravit[eé]|note|score)\b|'
+    r'\bet\s+(?:elle|cette)\b|'
+    r'\belle\b(?:\s*,\s*|\s+)(?:elle\s+)?(?:est\s+)?(?:dangereuse|critique|prioritaire|grave)\b|'
+    r'\b(?:explique|expliques|d[eé]taille|d[eé]cris|d[eé]crire)\b.{0,40}\b(?:cette|elle|la\s+cve)\b|'
+    r'\b(?:corriger|r[eé]soudre|fixer)\s+(?:cette|ce)\b'
+    r')'
+)
+_UNRESOLVED_CVE_MESSAGE = (
+    'Je ne peux pas déterminer quelle CVE vous désignez. '
+    'Veuillez préciser son identifiant, par exemple CVE-2025-XXXX.'
+)
 
 
 class ChatbotRateThrottle(UserRateThrottle):
@@ -63,6 +85,8 @@ def _select_scan(user, scan_id=None):
 
 
 def _select_conversation(user, scan, conversation_id=None, new_conversation=False):
+    if new_conversation:
+        return ChatConversation.objects.create(user=user, scan=scan)
     if conversation_id is not None:
         conversation = ChatConversation.objects.filter(pk=conversation_id, user=user).first()
         if conversation is None or conversation.scan_id != scan.id:
@@ -84,7 +108,197 @@ def _conversation_history(conversation, limit=12):
     )
 
 
-def _targeted_answer(question, facts, ai_answer=''):
+def _find_cve(facts, cve_id):
+    target = (cve_id or '').upper()
+    return next((item for item in facts['cves'] if item['id'].upper() == target), None)
+
+
+def _find_manual_vulnerability(facts, name):
+    target = (name or '').casefold()
+    return next(
+        (item for item in facts['manual_vulnerabilities'] if item['name'].casefold() == target),
+        None,
+    )
+
+
+def _is_followup_reference(question):
+    return bool(_FOLLOWUP_REFERENCE_RE.search(question or ''))
+
+
+def _last_finding_from_history(history, facts):
+    """Retourne la dernière CVE/vulnérabilité de l'historique présente dans facts."""
+    if not history:
+        return None
+
+    known_cves = {item['id'].upper() for item in facts['cves']}
+    known_vulns = [item['name'] for item in facts['manual_vulnerabilities'] if item.get('name')]
+
+    for line in reversed(history.splitlines()):
+        matches = list(_CVE_RE.finditer(line))
+        for match in reversed(matches):
+            cve_id = match.group(0).upper()
+            if cve_id in known_cves:
+                return {'type': 'cve', 'id': cve_id}
+
+        line_cf = line.casefold()
+        for name in known_vulns:
+            if name.casefold() in line_cf:
+                return {'type': 'vulnerability', 'name': name}
+    return None
+
+
+def resolve_conversation_target(question, history, facts):
+    """Identifie explicitement l'entité (CVE/vuln) visée par la question.
+
+    Priorité :
+    1. CVE explicite dans la question (si présente dans facts)
+    2. Vulnérabilité manuelle explicite dans la question
+    3-5. Référence conversationnelle → dernière entité fiable de l'historique
+    6. None si aucune cible fiable
+    """
+    question = question or ''
+    facts = facts or {}
+
+    match = _CVE_RE.search(question)
+    if match:
+        cve_id = match.group(0).upper()
+        if _find_cve(facts, cve_id) is not None:
+            return {'type': 'cve', 'id': cve_id}
+        return {'type': 'cve', 'id': cve_id, 'missing': True}
+
+    question_cf = question.casefold()
+    for item in facts.get('manual_vulnerabilities') or []:
+        name = item.get('name') or ''
+        if name and name.casefold() in question_cf:
+            return {'type': 'vulnerability', 'name': name}
+
+    if not _is_followup_reference(question):
+        return None
+
+    target = _last_finding_from_history(history, facts)
+    if target is not None:
+        return target
+    return {'type': 'unresolved'}
+
+
+def _cve_default_recommendation(cve):
+    return cve.get('recommendation') or (
+        'Appliquez le correctif officiel du fournisseur puis relancez le scan.'
+    )
+
+
+def _answer_about_cve(question, cve):
+    normalized = (question or '').casefold()
+    cve_id = cve['id']
+    score = cve['score']
+    description = cve['description'] or 'Description non fournie par le scan.'
+    recommendation = _cve_default_recommendation(cve)
+    correction_terms = (
+        'corrig', 'correctif', 'corrective', 'remédi', 'remedi',
+        'solution', 'recommand', 'résoudre', 'resoudre', 'fixer',
+    )
+    impact_terms = ('impact', 'danger', 'conséquence', 'consequence', 'effet')
+    severity_terms = (
+        'sévérité', 'severite', 'gravité', 'gravite', 'score', 'cvss', 'niveau',
+    )
+    why_terms = ('pourquoi', 'critique', 'prioritaire', 'grave', 'dangereuse', 'dangereux')
+
+    if any(term in normalized for term in correction_terms):
+        return (
+            f"Pour corriger {cve_id} : {recommendation} "
+            "Après correction, relancez le scan pour vérifier que la vulnérabilité n’est plus détectée."
+        )
+    if any(term in normalized for term in impact_terms):
+        return (
+            f"Impact de {cve_id} (CVSS {score}/10) : {description} "
+            "Les conditions d’exploitation dépendent du composant affecté et des informations de l’éditeur."
+        )
+    if any(term in normalized for term in severity_terms) and not any(
+        term in normalized for term in ('explique', 'expliques', 'détaille', 'detaille')
+    ):
+        level = (
+            'critique' if float(score) >= 9 else
+            'élevé' if float(score) >= 7 else
+            'moyen' if float(score) >= 4 else
+            'faible'
+        )
+        return (
+            f"{cve_id} a un score CVSS de {score}/10, soit un niveau de sévérité {level}."
+        )
+    if any(term in normalized for term in why_terms):
+        return (
+            f"{cve_id} est critique car son score CVSS est de {score}/10 et {description} "
+            f"Elle est prioritaire en raison de ce niveau de sévérité. "
+            f"Correction recommandée : {recommendation}"
+        )
+    return (
+        f"{cve_id} possède un score CVSS de {score}/10. Elle concerne {description} "
+        f"Son impact dépend du composant exposé ; le scan ne fournit pas davantage de détails "
+        f"exploitables. Elle est prioritaire en raison de son niveau de sévérité. "
+        f"Correction : {recommendation}"
+    )
+
+
+def _answer_about_vulnerability(question, vuln):
+    normalized = (question or '').casefold()
+    name = vuln['name']
+    score = vuln['score']
+    description = vuln['description'] or 'Description non fournie par le scan.'
+    impact = vuln.get('impact') or description
+    recommendation = vuln.get('recommendation') or (
+        'Appliquez le correctif recommandé puis relancez le scan.'
+    )
+    correction_terms = (
+        'corrig', 'correctif', 'corrective', 'remédi', 'remedi',
+        'solution', 'recommand', 'résoudre', 'resoudre', 'fixer',
+    )
+    impact_terms = ('impact', 'danger', 'conséquence', 'consequence', 'effet')
+    severity_terms = ('sévérité', 'severite', 'gravité', 'gravite', 'score', 'cvss', 'niveau')
+    why_terms = ('pourquoi', 'critique', 'prioritaire', 'grave', 'dangereuse', 'dangereux')
+
+    if any(term in normalized for term in correction_terms):
+        return (
+            f"Pour corriger {name} : {recommendation} "
+            "Après correction, relancez le scan pour vérifier que la vulnérabilité n’est plus détectée."
+        )
+    if any(term in normalized for term in impact_terms):
+        return f"Impact de {name} (CVSS {score}/10) : {impact}"
+    if any(term in normalized for term in severity_terms):
+        return f"{name} a un score CVSS de {score}/10 (risque {vuln.get('risk') or 'non précisé'})."
+    if any(term in normalized for term in why_terms):
+        return (
+            f"{name} est prioritaire car son score CVSS est de {score}/10. "
+            f"Impact : {impact}"
+        )
+    return (
+        f"{name} possède un score CVSS de {score}/10. "
+        f"Description : {description} Impact : {impact} "
+        f"Correction : {recommendation}"
+    )
+
+
+def _answer_for_resolved_target(question, target, facts):
+    if target is None:
+        return None
+    if target.get('type') == 'unresolved':
+        return _UNRESOLVED_CVE_MESSAGE
+    if target.get('type') == 'cve':
+        cve_id = target.get('id', '').upper()
+        if target.get('missing'):
+            return f"{cve_id} n’est pas présente dans les données de ce scan."
+        cve = _find_cve(facts, cve_id)
+        if cve is None:
+            return f"{cve_id} n’est pas présente dans les données de ce scan."
+        return _answer_about_cve(question, cve)
+    if target.get('type') == 'vulnerability':
+        vuln = _find_manual_vulnerability(facts, target.get('name'))
+        if vuln is None:
+            return _UNRESOLVED_CVE_MESSAGE
+        return _answer_about_vulnerability(question, vuln)
+    return None
+
+
+def _targeted_answer(question, facts, ai_answer='', history=''):
     normalized = question.casefold()
     mentioned_domains = {item.lower().removeprefix('www.') for item in _DOMAIN_RE.findall(question)}
     current_domain = (facts['domain'] or '').lower().removeprefix('www.')
@@ -123,25 +337,26 @@ def _targeted_answer(question, facts, ai_answer=''):
     if any(term in normalized for term in ('combien', 'nombre total', 'nombre de vuln', 'total de vuln')):
         return f"{total} vulnérabilité(s) ou constat(s) distinct(s) sont enregistrés pour ce scan."
 
-    if any(term in normalized for term in ('score', 'note globale', 'niveau global', 'risque global')):
+    # Score / risque global : ne pas confondre avec "son score" (référence à une CVE).
+    asks_global_score = any(
+        term in normalized for term in ('score global', 'note globale', 'niveau global', 'risque global')
+    ) or (
+        any(term in normalized for term in ('score', 'note globale', 'niveau global', 'risque global'))
+        and not _is_followup_reference(question)
+        and _CVE_RE.search(question) is None
+    )
+    if asks_global_score:
         from .ai_module.chatbot import _risk_label
         return (
             f"Le score global de {facts['domain']} est de {facts['score']}/10, "
             f"soit un niveau de risque {_risk_label(facts['score'])}."
         )
 
-    match = _CVE_RE.search(question)
-    if match:
-        cve_id = match.group(0).upper()
-        cve = next((item for item in facts['cves'] if item['id'].upper() == cve_id), None)
-        if cve is None:
-            return f"{cve_id} n’est pas présente dans les données de ce scan."
-        correction = cve['recommendation'] or 'Appliquez le correctif officiel du fournisseur puis relancez le scan.'
-        return (
-            f"{cve_id} (CVSS {cve['score']}/10) : {cve['description']} "
-            f"Les conditions d’exploitation dépendent du composant affecté et des informations de l’éditeur ; "
-            f"le scan ne fournit pas davantage de détails exploitables. Correction : {correction}"
-        )
+    # Résolution de contexte conversationnel AVANT le fallback général.
+    target = resolve_conversation_target(question, history, facts)
+    target_answer = _answer_for_resolved_target(question, target, facts)
+    if target_answer is not None:
+        return target_answer
 
     domain = facts['domain'] if re.fullmatch(r'[A-Za-z0-9.-]{1,253}', facts['domain'] or '') else '<domaine-du-scan>'
 
@@ -334,19 +549,35 @@ def chatbot_ask(request):
     data = input_serializer.validated_data
     question = data['question']
     requested_scan_id = data.get('scan_id')
-    scan, context_mode = _select_scan(request.user, requested_scan_id)
-    if scan is None:
-        if requested_scan_id is not None and Scan.objects.filter(pk=requested_scan_id).exists():
-            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
-        message = 'Scan introuvable' if requested_scan_id is not None else 'Aucun scan disponible.'
-        return Response({'error': message}, status=status.HTTP_404_NOT_FOUND)
+    conversation_id = data.get('conversation_id')
+    new_conversation = data.get('new_conversation', False)
+    conversation = None
 
-    conversation = _select_conversation(
-        request.user, scan, data.get('conversation_id'), data.get('new_conversation', False)
-    )
-    if conversation is None:
-        return Response({'error': 'Conversation introuvable ou incompatible avec ce scan.'},
-                        status=status.HTTP_404_NOT_FOUND)
+    if conversation_id is not None and requested_scan_id is None and not new_conversation:
+        conversation = ChatConversation.objects.select_related('scan').filter(
+            pk=conversation_id, user=request.user
+        ).first()
+        if conversation is None:
+            return Response({'error': 'Conversation introuvable ou incompatible avec ce scan.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        scan = conversation.scan
+        context_mode = 'scan'
+        if not _visible_scans(request.user).filter(pk=scan.id).exists():
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+    else:
+        scan, context_mode = _select_scan(request.user, requested_scan_id)
+        if scan is None:
+            if requested_scan_id is not None and Scan.objects.filter(pk=requested_scan_id).exists():
+                return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+            message = 'Scan introuvable' if requested_scan_id is not None else 'Aucun scan disponible.'
+            return Response({'error': message}, status=status.HTTP_404_NOT_FOUND)
+
+        conversation = _select_conversation(
+            request.user, scan, conversation_id, new_conversation
+        )
+        if conversation is None:
+            return Response({'error': 'Conversation introuvable ou incompatible avec ce scan.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
     from .ai_module.chatbot import (
         build_response_sections, build_scan_context, collect_scan_facts,
@@ -380,7 +611,7 @@ def chatbot_ask(request):
         sections = build_response_sections(scan, question, ai_answer or factual_conclusion(facts))
         answer = render_sections(sections)
     else:
-        answer = _targeted_answer(question, facts, ai_answer)
+        answer = _targeted_answer(question, facts, ai_answer, history=history)
 
     if sections is not None:
         sections = {

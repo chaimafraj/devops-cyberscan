@@ -406,7 +406,11 @@ class ChatbotApiTests(APITestCase):
         conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
         cases = [
             ('Combien de vulnérabilités critiques as-tu trouvées ?', ('0 vulnérabilités critiques',), ('3 vulnérabilité',)),
-            ('Donne-moi une solution technique pour CVE-2026-0001', ('Les conditions d’exploitation dépendent', 'Installer le correctif'), ("L'dépendantexploitation",)),
+            (
+                'Donne-moi une solution technique pour CVE-2026-0001',
+                ('Pour corriger CVE-2026-0001', 'Installer le correctif', 'relancez le scan'),
+                ('La priorité est de traiter',),
+            ),
             ('Quelles mesures correctives recommande-tu ?', ('Appliquer un contrôle objet strict', 'Installer le correctif'), ('Commandes de vérification',)),
         ]
         for question, expected, forbidden in cases:
@@ -421,6 +425,169 @@ class ChatbotApiTests(APITestCase):
                     self.assertIn(value, response.data['answer'])
                 for value in forbidden:
                     self.assertNotIn(value, response.data['answer'])
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_explicit_cve_explain_uses_scan_facts(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
+        response = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Explique CVE-2026-0001',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('CVE-2026-0001', response.data['answer'])
+        self.assertIn('8.6/10', response.data['answer'])
+        self.assertIn('Exécution distante', response.data['answer'])
+        self.assertNotIn('La priorité est de traiter', response.data['answer'])
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_conversation_followup_resolves_previous_cve(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
+        first = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Quelle est la CVE la plus critique ?',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertIn('CVE-2026-0001', first.data['answer'])
+
+        follow_ups = [
+            ('Explique cette CVE', ('CVE-2026-0001', 'Exécution distante', '8.6/10'), ('La priorité est de traiter',)),
+            ('Comment la corriger ?', ('Pour corriger CVE-2026-0001', 'Installer le correctif', 'relancez le scan'), ('La priorité est de traiter',)),
+            ('Quel est son impact ?', ('Impact de CVE-2026-0001', 'Exécution distante'), ('La priorité est de traiter',)),
+            ('Pourquoi est-elle critique ?', ('CVE-2026-0001', '8.6/10', 'prioritaire'), ('La priorité est de traiter',)),
+            ('Quelle est sa sévérité ?', ('CVE-2026-0001', '8.6/10'), ('La priorité est de traiter',)),
+            ('Quelle recommandation ?', ('Pour corriger CVE-2026-0001', 'Installer le correctif'), ('La priorité est de traiter',)),
+            ('Comment résoudre cette vulnérabilité ?', ('Pour corriger CVE-2026-0001', 'Installer le correctif'), ('La priorité est de traiter',)),
+            ('Et elle, elle est dangereuse ?', ('CVE-2026-0001', '8.6/10'), ('La priorité est de traiter',)),
+        ]
+        for question, expected, forbidden in follow_ups:
+            with self.subTest(question=question):
+                response = self.client.post(
+                    reverse('chatbot_ask'),
+                    {
+                        'question': question,
+                        'scan_id': self.scan.id,
+                        'conversation_id': conversation.id,
+                    },
+                    format='json',
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse(response.data['is_report'])
+                for value in expected:
+                    self.assertIn(value, response.data['answer'])
+                for value in forbidden:
+                    self.assertNotIn(value, response.data['answer'])
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_followup_without_history_asks_for_cve_id(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
+        response = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Explique cette CVE',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+                'new_conversation': True,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Je ne peux pas déterminer quelle CVE vous désignez', response.data['answer'])
+        self.assertNotIn('La priorité est de traiter', response.data['answer'])
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_followup_ignores_cve_absent_from_scan_facts(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.scan)
+        ChatMessage.objects.create(
+            conversation=conversation,
+            role=ChatMessage.Role.ASSISTANT,
+            content='CVE-1999-9999 est la plus critique avec un CVSS de 9.8.',
+        )
+        response = self.client.post(
+            reverse('chatbot_ask'),
+            {
+                'question': 'Explique cette CVE',
+                'scan_id': self.scan.id,
+                'conversation_id': conversation.id,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Je ne peux pas déterminer quelle CVE vous désignez', response.data['answer'])
+        self.assertNotIn('CVE-1999-9999', response.data['answer'])
+
+    def test_resolve_conversation_target_priority(self):
+        facts = {
+            'cves': [
+                {
+                    'id': 'CVE-2026-0001',
+                    'score': '8.6',
+                    'description': 'Exécution distante',
+                    'recommendation': 'Installer le correctif',
+                },
+                {
+                    'id': 'CVE-2026-0002',
+                    'score': '7.0',
+                    'description': 'Autre faille',
+                    'recommendation': 'Patch B',
+                },
+            ],
+            'manual_vulnerabilities': [
+                {
+                    'name': 'Contrôle accès faible',
+                    'score': '7.5',
+                    'description': 'Accès non autorisé',
+                    'impact': 'Fuite de données',
+                    'recommendation': 'Contrôle objet strict',
+                    'risk': 'high',
+                },
+            ],
+        }
+        history = (
+            'Utilisateur: Quelle est la CVE la plus critique ?\n'
+            'CyberScan IA: CVE-2026-0001 est prioritaire car son score CVSS est de 8.6/10.'
+        )
+
+        self.assertEqual(
+            chatbot_views.resolve_conversation_target('Explique CVE-2026-0002', history, facts),
+            {'type': 'cve', 'id': 'CVE-2026-0002'},
+        )
+        self.assertEqual(
+            chatbot_views.resolve_conversation_target(
+                'Parle-moi de Contrôle accès faible', history, facts
+            ),
+            {'type': 'vulnerability', 'name': 'Contrôle accès faible'},
+        )
+        self.assertEqual(
+            chatbot_views.resolve_conversation_target('Explique cette CVE', history, facts),
+            {'type': 'cve', 'id': 'CVE-2026-0001'},
+        )
+        self.assertEqual(
+            chatbot_views.resolve_conversation_target('Comment la corriger ?', history, facts),
+            {'type': 'cve', 'id': 'CVE-2026-0001'},
+        )
+        self.assertIsNone(
+            chatbot_views.resolve_conversation_target('Quels sont les risques ?', history, facts)
+        )
+        self.assertEqual(
+            chatbot_views.resolve_conversation_target('Explique cette CVE', '', facts),
+            {'type': 'unresolved'},
+        )
+        missing = chatbot_views.resolve_conversation_target(
+            'Explique CVE-2099-0001', history, facts
+        )
+        self.assertEqual(missing['type'], 'cve')
+        self.assertEqual(missing['id'], 'CVE-2099-0001')
+        self.assertTrue(missing.get('missing'))
 
     @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
     def test_port_questions_report_nmap_timeout_without_inventing_results(self, _get_chatbot):
@@ -526,6 +693,19 @@ class ChatbotApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['question'], 'Quel est le risque ?')
+
+    @patch('scanner.chatbot_views._get_chatbot', return_value=_FailingChatbot())
+    def test_existing_conversation_uses_its_scan_when_scan_id_is_omitted(self, _get_chatbot):
+        conversation = ChatConversation.objects.create(user=self.user, scan=self.old_scan)
+        response = self.client.post(
+            reverse('chatbot_ask'),
+            {'message': 'Quel est le score global du scan ?', 'conversation_id': conversation.id},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['scan_id'], self.old_scan.id)
+        self.assertIn('2.5/10', response.data['answer'])
+
     def test_request_validation(self):
         self.assertEqual(self.client.post(reverse('chatbot_ask'), {}, format='json').status_code, 400)
         self.assertEqual(self.client.post(

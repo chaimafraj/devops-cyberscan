@@ -350,7 +350,7 @@ def run_nuclei(target, port=None, cancel_check=None):
         # the scan within the process timeout instead of running every locally
         # installed Nuclei template.
         base_command = (
-            f"timeout 90s nuclei -u {quoted_url} -silent -timeout 5 -no-color "
+            f"timeout 180s nuclei -u {quoted_url} -silent -timeout 5 -no-color "
             f"-t http/technologies/tech-detect.yaml,http/exposures/,http/cves/ "
             # Conserver aussi les niveaux info/low : les templates de détection
             # technologique (comme tech-detect) les utilisent et ces constats
@@ -360,14 +360,14 @@ def run_nuclei(target, port=None, cancel_check=None):
 
         raw_output, err, exit_status = _run_local_command(
             f"{base_command} -jsonl",
-            timeout=110,
+            timeout=200,
             cancel_check=cancel_check,
         )
 
         if 'flag provided but not defined' in err.lower() and 'jsonl' in err.lower():
             raw_output, err, exit_status = _run_local_command(
                 f"{base_command} -json",
-                timeout=110,
+                timeout=200,
                 cancel_check=cancel_check,
             )
 
@@ -381,7 +381,7 @@ def run_nuclei(target, port=None, cancel_check=None):
         if exit_status == 124:
             return {
                 'success': False,
-                'error': 'Nuclei a depasse la limite de 90 secondes',
+                'error': 'Nuclei a depasse la limite de 180 secondes',
                 'findings': findings,
                 'raw': combined_output,
             }

@@ -26,6 +26,7 @@ export class ThemeService {
   private apply(theme: AppTheme): void {
     sessionStorage.setItem(this.storageKey, theme);
     this.document.body.setAttribute('data-theme', theme);
+    this.document.documentElement.setAttribute('data-theme', theme);
     this.document.documentElement.style.colorScheme = theme;
     this.themeSubject.next(theme);
   }

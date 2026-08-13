@@ -18,9 +18,10 @@ export class MatrixBackground implements AfterViewInit, OnDestroy {
     canvas.height = window.innerHeight;
     const drops = Array<number>(Math.floor(canvas.width / 14)).fill(1);
     this.interval = setInterval(() => {
-      context.fillStyle = 'rgba(0,0,0,0.05)';
+      const styles = getComputedStyle(document.body);
+      context.fillStyle = styles.getPropertyValue('--matrix-fade').trim();
       context.fillRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = '#00FF41';
+      context.fillStyle = styles.getPropertyValue('--matrix-glyph').trim();
       context.font = '13px monospace';
       drops.forEach((y, index) => {
         context.fillText(String.fromCharCode(0x30a0 + Math.random() * 96), index * 14, y * 14);

@@ -94,7 +94,7 @@
           <div class="risk-track">
             <div class="risk-fill"
                  [style.width.%]="(scanResult?.score_risque_ia ?? 0) * 10"
-                 [style.background]="(scanResult?.score_risque_ia ?? 0) >= 7 ? '#ff4444' : (scanResult?.score_risque_ia ?? 0) >= 4 ? '#ffaa00' : '#00FF41'">
+                 [ngClass]="(scanResult?.score_risque_ia ?? 0) >= 7 ? 'danger' : (scanResult?.score_risque_ia ?? 0) >= 4 ? 'warn' : 'ok'">
             </div>
           </div>
         </div>

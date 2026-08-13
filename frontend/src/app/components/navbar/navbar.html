@@ -34,7 +34,7 @@
 
     <div class="nav-right">
       <button class="theme-toggle" type="button" (click)="toggleTheme()">
-        {{ isDark ? '☀ LIGHT' : '☾ DARK' }}
+        {{ theme() === 'dark' ? '☀ LIGHT' : '☾ DARK' }}
       </button>
 
       <div class="user-info" *ngIf="currentUser() as user">

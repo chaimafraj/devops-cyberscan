@@ -76,9 +76,9 @@
           <div class="action-label">ALERTES</div>
         </a>
 
-        <a *ngIf="userRole === 'Admin'" routerLink="/admin-settings" class="action-card admin-only" style="border-color: #dc3545;">
-          <div class="action-icon" style="color: #dc3545;">⚙️</div>
-          <div class="action-label" style="color: #dc3545;">CONFIG ADMIN</div>
+        <a *ngIf="userRole === 'Admin'" routerLink="/admin-settings" class="action-card admin-only">
+          <div class="action-icon">⚙️</div>
+          <div class="action-label">CONFIG ADMIN</div>
         </a>
       </div>
     </div>
@@ -90,7 +90,7 @@
       <div class="terminal-line ok">[✓] VM Debian SSH — 192.168.11.131</div>
       <div class="terminal-line cmd">[►] {{ totalScans }} scans enregistrés</div>
 
-      <div class="terminal-line warn" *ngIf="userRole === 'Admin'" style="color: #ffc107;">
+      <div class="terminal-line warn" *ngIf="userRole === 'Admin'">
         [!] Mode Privilégié : Session Administrateur Active.
       </div>
 

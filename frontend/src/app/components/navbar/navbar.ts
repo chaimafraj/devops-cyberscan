@@ -22,6 +22,7 @@ import { Subscription, filter } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { DataSyncService } from '../../services/data-sync.service';
 import { Notification, NotificationService } from '../../services/notification.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-navbar',
@@ -37,6 +38,7 @@ export class Navbar implements OnInit, OnDestroy {
   private readonly dataSync = inject(DataSyncService);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly themeService = inject(ThemeService);
 
   /** Direct auth signal — updates the view immediately after login (zoneless-safe). */
   readonly currentUser = this.authService.currentUser;
@@ -44,8 +46,8 @@ export class Navbar implements OnInit, OnDestroy {
   readonly notifications = toSignal(this.notifService.notifications$, {
     initialValue: [] as Notification[],
   });
+  readonly theme = toSignal(this.themeService.theme$, { initialValue: this.themeService.current });
 
-  isDark = true;
   isMenuOpen = false;
   isNotificationsOpen = false;
   notificationsLoading = false;
@@ -67,10 +69,6 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    const savedTheme = sessionStorage.getItem('theme') || 'dark';
-    this.isDark = savedTheme === 'dark';
-    document.body.setAttribute('data-theme', savedTheme);
-
     // Ensure session is reflected even if login happened before this view checked.
     this.authService.syncUserFromStorage();
 
@@ -173,10 +171,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   toggleTheme(): void {
-    this.isDark = !this.isDark;
-    const theme = this.isDark ? 'dark' : 'light';
-    sessionStorage.setItem('theme', theme);
-    document.body.setAttribute('data-theme', theme);
+    this.themeService.toggle();
   }
 
   toggleMenu(): void {

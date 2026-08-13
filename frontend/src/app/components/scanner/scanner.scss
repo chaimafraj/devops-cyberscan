@@ -280,6 +280,10 @@
   transition: width 0.6s ease, background 0.3s ease;
 }
 
+.risk-fill.ok { background: var(--status-ok); }
+.risk-fill.warn { background: var(--status-warn); }
+.risk-fill.danger { background: var(--status-danger); }
+
 .vuln-item {
   padding: 6px 0;
   border-bottom: 1px solid #00FF4111;

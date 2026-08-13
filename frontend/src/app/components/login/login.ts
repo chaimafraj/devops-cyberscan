@@ -74,9 +74,10 @@ export class Login implements OnInit, OnDestroy {
       const cols = Math.floor(canvas.width / 14);
       const drops = Array(cols).fill(1);
       this.matrixInterval = setInterval(() => {
-        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        const styles = getComputedStyle(document.body);
+        ctx.fillStyle = styles.getPropertyValue('--matrix-fade').trim();
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#00FF41';
+        ctx.fillStyle = styles.getPropertyValue('--matrix-glyph').trim();
         ctx.font = '13px monospace';
         drops.forEach((y, i) => {
           const ch = String.fromCharCode(0x30a0 + Math.random() * 96);

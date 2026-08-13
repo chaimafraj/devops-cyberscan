@@ -51,24 +51,24 @@ import { Observable } from 'rxjs';
       backdrop-filter: blur(10px);
     }
     .cyber-toast.success {
-      background: rgba(0, 255, 65, 0.12);
-      border-color: #00FF41;
-      color: #00FF41;
+      background: color-mix(in srgb, var(--status-ok) 12%, transparent);
+      border-color: var(--status-ok);
+      color: var(--status-ok);
     }
     .cyber-toast.error {
-      background: rgba(255, 68, 68, 0.12);
-      border-color: #ff4444;
-      color: #ff4444;
+      background: color-mix(in srgb, var(--status-danger) 12%, transparent);
+      border-color: var(--status-danger);
+      color: var(--status-danger);
     }
     .cyber-toast.warning {
-      background: rgba(255, 170, 0, 0.12);
-      border-color: #ffaa00;
-      color: #ffaa00;
+      background: color-mix(in srgb, var(--status-warn) 12%, transparent);
+      border-color: var(--status-warn);
+      color: var(--status-warn);
     }
     .cyber-toast.info {
-      background: rgba(0, 123, 255, 0.12);
-      border-color: #007bff;
-      color: #007bff;
+      background: color-mix(in srgb, var(--status-info) 12%, transparent);
+      border-color: var(--status-info);
+      color: var(--status-info);
     }
     .toast-icon { font-size: 16px; }
     .toast-msg { flex: 1; }

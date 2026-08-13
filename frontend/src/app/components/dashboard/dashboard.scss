@@ -245,6 +245,15 @@
   transform: translateY(-2px);
 }
 
+.action-card.admin-only {
+  border-color: var(--danger);
+}
+
+.action-card.admin-only .action-icon,
+.action-card.admin-only .action-label {
+  color: var(--danger);
+}
+
 .action-icon {
   font-size: 28px;
   margin-bottom: 10px;
@@ -278,6 +287,7 @@
 .terminal-line.cmd { color: #00d4ff; }
 .terminal-line.ok  { color: #00FF41; }
 .terminal-line.err { color: #ff4444; }
+.terminal-line.warn { color: var(--warn); }
 
 .cursor {
   display: inline-block;

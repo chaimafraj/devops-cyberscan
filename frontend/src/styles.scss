@@ -613,8 +613,14 @@ body[data-theme='light'] .scan-input-row input,
 body[data-theme='light'] .edit-input {
   background: var(--surface-soft) !important;
   color: #0F172A !important;
-  border-color: rgba(37, 99, 235, 0.28) !important;
+  border-color: #cbd5e1 !important;
   border-radius: 0 !important;
+}
+
+body[data-theme='light'] .filter-bar {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08) !important;
 }
 
 body[data-theme='light'] .scan-input:focus,
@@ -648,14 +654,25 @@ body[data-theme='light'] .check-btn {
     transform 0.2s ease !important;
 }
 
-body[data-theme='light'] .scan-btn:hover,
-body[data-theme='light'] .cyber-btn:hover,
-body[data-theme='light'] .refresh-btn:hover,
-body[data-theme='light'] .check-btn:hover {
+body[data-theme='light'] .scan-btn:hover:not(:disabled),
+body[data-theme='light'] .cyber-btn:hover:not(:disabled),
+body[data-theme='light'] .refresh-btn:hover:not(:disabled),
+body[data-theme='light'] .check-btn:hover:not(:disabled) {
   background: var(--cyan) !important;
   border-color: var(--blue) !important;
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24) !important;
   transform: translateY(-1px);
+}
+
+body[data-theme='light'] .scan-btn:disabled,
+body[data-theme='light'] .cyber-btn:disabled,
+body[data-theme='light'] .refresh-btn:disabled,
+body[data-theme='light'] .check-btn:disabled {
+  background: #e5e7eb !important;
+  border-color: #cbd5e1 !important;
+  color: #6b7280 !important;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 body[data-theme='light'] .scan-btn::after,

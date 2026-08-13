@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { timeout as rxTimeout } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { ScannerService } from '../../services/scanner.service';
 import { ExportService } from '../../services/export.service';
@@ -100,7 +101,7 @@ class Historique implements OnInit, OnDestroy {
     if (search) params = params.set('search', search);
     if (this.filterRisk) params = params.set('risk', this.filterRisk.toUpperCase());
 
-    this.http.get<any>(`${this.apiUrl}/scans/`, { params }).subscribe({
+    this.http.get<any>(`${this.apiUrl}/scans/`, { params }).pipe(rxTimeout(15000)).subscribe({
       next: (data) => {
         const list = Array.isArray(data) ? data : (data.results ?? []);
         this.total = data.total ?? data.count ?? list.length;
@@ -114,6 +115,10 @@ class Historique implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('API Error:', err);
+        this.showActionMessage(
+          'error',
+          "Impossible de charger l'historique des scans. Vérifiez que l'API backend répond.",
+        );
         this.loading = false;
         this.cdr.detectChanges();
       },

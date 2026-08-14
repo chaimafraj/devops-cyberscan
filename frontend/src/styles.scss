@@ -967,6 +967,10 @@ body[data-theme='light'] .close-btn {
   color: #0F172A !important;
 }
 
+body[data-theme=light] .historique-page :is(.status-icon,.action-btn,.cyber-paginator,.mat-mdc-paginator-range-label){color:#2563eb!important;}
+body[data-theme=light] .historique-page .scans-table{scrollbar-color:#2563eb #dbeafe!important;}
+body[data-theme=light] .historique-page .scans-table::-webkit-scrollbar-thumb{background:#2563eb!important;}
+
 body[data-theme='dark'] .dashboard,
 body[data-theme='dark'] .scanner-page,
 body[data-theme='dark'] .historique-page,

@@ -522,7 +522,8 @@ body[data-theme='light'] {
 body[data-theme='light'] .dashboard,
 body[data-theme='light'] .scanner-page,
 body[data-theme='light'] .historique-page,
-body[data-theme='light'] .alertes-page {
+body[data-theme='light'] .alertes-page,
+body[data-theme='light'] .login-page {
   background: var(--bg) !important;
   color: #0F172A !important;
 }
@@ -595,7 +596,8 @@ body[data-theme='light'] #matrix-bg,
 body[data-theme='light'] #matrix-canvas,
 body[data-theme='light'] #scanner-matrix,
 body[data-theme='light'] #hist-matrix,
-body[data-theme='light'] #alertes-matrix {
+body[data-theme='light'] #alertes-matrix,
+body[data-theme='light'] #login-matrix {
   opacity: 0.02 !important;
   filter: invert(1) hue-rotate(165deg) saturate(0.8);
 }
@@ -1032,6 +1034,76 @@ body[data-theme='light'] .alertes-page .alerte-modal.danger .modal-icon {
 
 body[data-theme='light'] .alertes-page .alerte-modal.warn .modal-icon {
   color: #b45309 !important;
+}
+
+body[data-theme='light'] .login-page .login-header .logo {
+  color: var(--cyan) !important;
+  text-shadow: none !important;
+}
+
+body[data-theme='light'] .login-page .login-header .logo span {
+  color: #0F172A !important;
+}
+
+body[data-theme='light'] .login-page .logo-sub,
+body[data-theme='light'] .login-page .box-title,
+body[data-theme='light'] .login-page .input-group label {
+  color: rgba(15, 23, 42, 0.68) !important;
+}
+
+body[data-theme='light'] .login-page .login-box {
+  background: var(--surface) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: 0 18px 46px rgba(37, 99, 235, 0.14) !important;
+}
+
+body[data-theme='light'] .login-page .login-box::before {
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent) !important;
+}
+
+body[data-theme='light'] .login-page .box-title,
+body[data-theme='light'] .login-page .terminal-status {
+  border-color: rgba(0, 212, 255, 0.28) !important;
+}
+
+body[data-theme='light'] .login-page .cyber-input {
+  background: #ffffff !important;
+  border-color: rgba(37, 99, 235, 0.28) !important;
+  color: #0F172A !important;
+}
+
+body[data-theme='light'] .login-page .cyber-input:focus {
+  border-color: var(--blue) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+}
+
+body[data-theme='light'] .login-page .cyber-input::placeholder {
+  color: #64748B !important;
+}
+
+body[data-theme='light'] .login-page .login-btn {
+  background: var(--blue) !important;
+  border-color: var(--cyan) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+body[data-theme='light'] .login-page .login-btn:hover:not(:disabled) {
+  background: var(--cyan) !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24) !important;
+}
+
+body[data-theme='light'] .login-page .terminal-line,
+body[data-theme='light'] .login-page .terminal-line.ok {
+  color: var(--blue) !important;
+}
+
+body[data-theme='light'] .login-page .terminal-line.cmd {
+  color: var(--cyan) !important;
+}
+
+body[data-theme='light'] .login-page .cursor {
+  background: var(--blue) !important;
 }
 
 body[data-theme='light'] .chatbot-root {

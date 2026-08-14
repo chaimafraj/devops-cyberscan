@@ -91,7 +91,8 @@ class ScanListApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         row = response.data["results"][0]
         self.assertEqual(row["domaine"], "table.example")
-        self.assertEqual(row["protocols"], [{"name": "TLSv1.2", "status": "secure"}])
+        self.assertEqual(row["protocols_count"], 1)
+        self.assertNotIn("protocols", row)
         self.assertEqual(row["rapport_status"], "pret")
         self.assertEqual(row["email_status"], "envoye")
         self.assertNotIn("resultats_ssl", row)

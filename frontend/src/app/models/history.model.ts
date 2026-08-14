@@ -14,6 +14,7 @@ export interface Scan {
   status?: string;
   error_message?: string;
   client_nom?: string;
+  protocols_count?: number;
   protocols?: ProtocolResult[];
   resultats_ssl?: ScanResults;
   whatweb?: { technologies?: Technology[] };

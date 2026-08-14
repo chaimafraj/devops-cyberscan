@@ -139,10 +139,12 @@ class Historique implements OnInit, OnDestroy {
     const pdfReady = !!(s.pdf_disponible ?? s.has_rapport);
     const rawScore = Number(s.score_risque_ia ?? 0);
     const score = Number.isFinite(rawScore) ? rawScore : 0;
+    const protocols = Array.isArray(s.protocols) ? s.protocols : (s.resultats_ssl?.protocols ?? []);
     return {
       ...s,
       client_nom: s.client_nom || '—',
-      protocols: Array.isArray(s.protocols) ? s.protocols : (s.resultats_ssl?.protocols ?? []),
+      protocols_count: this.normalizeProtocolCount(s) ?? (Array.isArray(protocols) ? protocols.length : 0),
+      protocols,
       score_risque_ia: score,
       riskClass: score >= 7 ? 'danger' : score >= 4 ? 'warn' : 'ok',
       statut: score >= 7 ? 'ÉLEVÉ' : score >= 4 ? 'MOYEN' : 'FAIBLE',
@@ -158,10 +160,18 @@ class Historique implements OnInit, OnDestroy {
   }
 
   getProtocolCount(scan: any): number {
+    const count = this.normalizeProtocolCount(scan);
+    if (count != null) return count;
+
     const protocols = Array.isArray(scan?.protocols)
       ? scan.protocols
       : (scan?.resultats_ssl?.protocols ?? []);
     return Array.isArray(protocols) ? protocols.length : 0;
+  }
+
+  private normalizeProtocolCount(scan: any): number | null {
+    const count = Number(scan?.protocols_count);
+    return Number.isFinite(count) && count >= 0 ? count : null;
   }
 
   getScanStatusLabel(status: unknown): string {

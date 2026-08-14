@@ -46,7 +46,7 @@ class CVESerializer(serializers.ModelSerializer):
 class ScanSummarySerializer(serializers.ModelSerializer):
     client_nom = serializers.SerializerMethodField()
     cves_count = serializers.SerializerMethodField()
-    protocols = serializers.SerializerMethodField()
+    protocols_count = serializers.SerializerMethodField()
     rapport_status = serializers.SerializerMethodField()
     email_status = serializers.SerializerMethodField()
     manual_vulnerabilities_count = serializers.IntegerField(read_only=True, default=0)
@@ -57,7 +57,7 @@ class ScanSummarySerializer(serializers.ModelSerializer):
         model = Scan
         fields = [
             'id', 'domaine', 'date_scan', 'score_risque_ia', 'status',
-            'error_message', 'client_nom', 'protocols', 'cves_count',
+            'error_message', 'client_nom', 'protocols_count', 'cves_count',
             'manual_vulnerabilities_count', 'has_rapport', 'pdf_disponible',
             'rapport_status', 'email_status',
         ]
@@ -69,10 +69,10 @@ class ScanSummarySerializer(serializers.ModelSerializer):
         results = obj.resultats_ssl if isinstance(obj.resultats_ssl, dict) else {}
         return len(collect_scan_cves(obj, results))
 
-    def get_protocols(self, obj):
+    def get_protocols_count(self, obj):
         results = obj.resultats_ssl if isinstance(obj.resultats_ssl, dict) else {}
         protocols = results.get('protocols')
-        return protocols if isinstance(protocols, list) else []
+        return len(protocols) if isinstance(protocols, list) else 0
 
     def get_rapport_status(self, obj):
         has_rapport = getattr(obj, 'has_rapport_value', None)

@@ -82,6 +82,10 @@ body {
   --app-font: 'Inter', Arial, sans-serif;
   --title-font: 'Montserrat', Arial, sans-serif;
   --mono-font: 'JetBrains Mono', 'Share Tech Mono', 'Courier New', monospace;
+  --motion-fast: 0.18s;
+  --motion-page: 0.5s;
+  --motion-panel: 0.42s;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body,
@@ -96,6 +100,48 @@ body {
   font-size: 18px;
   line-height: 1.45;
   min-height: 100vh;
+}
+
+@keyframes cyber-page-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cyber-panel-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cyber-row-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+:is(.dashboard, .scanner-page, .historique-page, .alertes-page, .clients-container, .profile-container, .login-page) {
+  animation: cyber-page-enter var(--motion-page) var(--motion-ease) both;
+}
+
+:is(.dashboard-content, .scanner-content, .historique-content, .login-container, .page-header, .filter-bar, .scan-form, .stats-grid, .results-grid, .options-grid, .recent-scans, .scans-table, .table-wrapper, .profile-card, .add-form, .password-form, .terminal, .login-box, .modal-box, .proto-modal-box, .alerte-modal) {
+  animation: cyber-panel-enter var(--motion-panel) var(--motion-ease) both;
+}
+
+:is(.stat-card, .result-card, .option-card, .action-card, .alerte-item, .alerte-stat, .scan-item, .info-row, .quick-actions-card, .detail-card) {
+  animation: cyber-panel-enter var(--motion-panel) var(--motion-ease) both;
+  transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast), box-shadow var(--motion-fast), background-color var(--motion-fast);
+}
+
+:is(.stat-card, .result-card, .option-card, .action-card, .alerte-item, .alerte-stat, .scan-item, .info-row, .detail-card):hover {
+  transform: translateY(-2px);
+}
+
+:is(.cyber-table .mat-mdc-row, .clients-table tbody tr, .tools-table tbody tr) {
+  animation: cyber-row-enter 0.32s var(--motion-ease) both;
+}
+
+button:hover:not(:disabled),
+a:hover,
+:is(.action-btn, .cyber-btn, .refresh-btn, .login-btn, .btn-primary, .btn-secondary, .btn-danger):hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 h1,
@@ -1142,4 +1188,15 @@ body[data-theme='dark'] .proto-modal-header {
 .ai-value {
   color: var(--text-strong);
   white-space: pre-line;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -61,8 +61,8 @@
 
         <ng-container matColumnDef="protocols">
           <th mat-header-cell *matHeaderCellDef>PROTOCOLES</th>
-          <td mat-cell *matCellDef="let scan" class="proto" [title]="getProtocolSummary(scan)">
-            {{ getProtocolSummary(scan) }}
+          <td mat-cell *matCellDef="let scan" class="proto">
+            {{ getProtocolCount(scan) }}
           </td>
         </ng-container>
 

@@ -157,14 +157,11 @@ class Historique implements OnInit, OnDestroy {
     };
   }
 
-  getProtocolSummary(scan: any): string {
+  getProtocolCount(scan: any): number {
     const protocols = Array.isArray(scan?.protocols)
       ? scan.protocols
       : (scan?.resultats_ssl?.protocols ?? []);
-    const names = protocols
-      .map((protocol: any) => protocol?.name || protocol)
-      .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
-    return names.length ? names.join(', ') : 'Aucun';
+    return Array.isArray(protocols) ? protocols.length : 0;
   }
 
   getScanStatusLabel(status: unknown): string {

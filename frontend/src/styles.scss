@@ -971,6 +971,69 @@ body[data-theme=light] .historique-page :is(.status-icon,.action-btn,.cyber-pagi
 body[data-theme=light] .historique-page .scans-table{scrollbar-color:#2563eb #dbeafe!important;}
 body[data-theme=light] .historique-page .scans-table::-webkit-scrollbar-thumb{background:#2563eb!important;}
 
+body[data-theme='light'] .scanner-page .option-card input[type='checkbox'] {
+  accent-color: var(--blue) !important;
+}
+
+body[data-theme='light'] .scanner-page :is(.zap-name, .zap-solution, .badge-info) {
+  color: var(--blue) !important;
+}
+
+body[data-theme='light'] .scanner-page .badge-info {
+  border-color: var(--blue) !important;
+}
+
+body[data-theme='light'] .scanner-page :is(.zap-item:not(.risk-high):not(.risk-medium):not(.risk-low), .zap-item.risk-info) {
+  border-left-color: var(--blue) !important;
+  background: rgba(37, 99, 235, 0.08) !important;
+}
+
+body[data-theme='light'] .scanner-page .zap-desc {
+  color: rgba(15, 23, 42, 0.68) !important;
+}
+
+body[data-theme='light'] .alertes-page :is(.alerte-title, .details-hint, .modal-icon, .modal-kicker, .detail-label, .detail-section h4) {
+  color: var(--blue) !important;
+}
+
+body[data-theme='light'] .alertes-page :is(.alerte-item.ok, .detail-section, .alerte-modal:not(.danger):not(.warn)) {
+  border-color: var(--blue) !important;
+}
+
+body[data-theme='light'] .alertes-page .alerte-item.ok {
+  border-left-color: var(--blue) !important;
+}
+
+body[data-theme='light'] .alertes-page .alerte-stat.ok .stat-num,
+body[data-theme='light'] .alertes-page .alerte-item.ok .alerte-icon,
+body[data-theme='light'] .alertes-page .alerte-badge.ok {
+  color: var(--blue) !important;
+  border-color: var(--blue) !important;
+}
+
+body[data-theme='light'] .alertes-page :is(.alertes-state button, .modal-footer button) {
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: var(--blue) !important;
+  color: var(--blue) !important;
+}
+
+body[data-theme='light'] .alertes-page :is(.alertes-state button, .modal-footer button):hover {
+  background: rgba(37, 99, 235, 0.16) !important;
+}
+
+body[data-theme='light'] .alertes-page .alerte-modal:not(.danger):not(.warn) {
+  border-top-color: var(--blue) !important;
+  box-shadow: 0 20px 50px rgba(37, 99, 235, 0.18) !important;
+}
+
+body[data-theme='light'] .alertes-page .alerte-modal.danger .modal-icon {
+  color: #b91c1c !important;
+}
+
+body[data-theme='light'] .alertes-page .alerte-modal.warn .modal-icon {
+  color: #b45309 !important;
+}
+
 body[data-theme='dark'] .dashboard,
 body[data-theme='dark'] .scanner-page,
 body[data-theme='dark'] .historique-page,

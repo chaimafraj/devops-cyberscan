@@ -3,7 +3,12 @@
   <div class="scanline"></div>
 
   <div class="nav-content">
-    <div class="logo">CYBER<span>SCAN</span></div>
+    <div class="brand" aria-label="CyberScan">
+      <img class="brand-mark" src="logo-cyberscan.svg" alt="" />
+      <span class="brand-text" aria-hidden="true">
+        <span class="brand-prefix">CYBER</span><span class="brand-suffix">SCAN</span>
+      </span>
+    </div>
 
     <button
       *ngIf="currentUser()"

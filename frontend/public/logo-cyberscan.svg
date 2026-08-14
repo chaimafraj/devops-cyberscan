@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" role="img" aria-labelledby="title desc">
+  <title id="title">CyberScan logo</title>
+  <desc id="desc">A neon security scan mark followed by the CyberScan wordmark.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="10" x2="70" y1="8" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00f5ff" />
+      <stop offset="0.52" stop-color="#39ff6a" />
+      <stop offset="1" stop-color="#a7ff4f" />
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g filter="url(#softGlow)">
+    <path
+      d="M40 7 65 17v18c0 16.5-10.4 25.9-25 30-14.6-4.1-25-13.5-25-30V17L40 7Z"
+      fill="#071007"
+      stroke="url(#markGradient)"
+      stroke-width="4"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M29 35c0-6.2 4.8-11 11.3-11 4.2 0 7.3 1.6 9.6 4.2"
+      fill="none"
+      stroke="#39ff6a"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+    <path
+      d="M52 39c-1.6 5.4-5.9 8.9-11.7 8.9-6.5 0-11.3-4.7-11.3-11"
+      fill="none"
+      stroke="#00f5ff"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+    <path d="M22 36h35" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity="0.9" />
+    <path d="M62 22h13M62 36h17M62 50h11" stroke="#39ff6a" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />
+  </g>
+
+  <g font-family="Orbitron, Share Tech Mono, monospace" font-weight="700" letter-spacing="2">
+    <text x="90" y="45" fill="#39ff6a" font-size="29">CYBER</text>
+    <text x="202" y="45" fill="#ffffff" font-size="29">SCAN</text>
+  </g>
+  <path d="M91 55h175" stroke="#39ff6a" stroke-width="2" stroke-linecap="round" opacity="0.42" />
+</svg>

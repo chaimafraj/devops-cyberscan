@@ -51,16 +51,34 @@
   padding: 14px 28px;
 }
 
-.logo {
+.brand {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 0 8px #00ff4170);
+}
+
+.brand-text {
   font-family: 'Orbitron', monospace;
   font-size: 18px;
   font-weight: 700;
-  color: #00FF41;
   text-shadow: 0 0 10px #00FF41;
   letter-spacing: 2px;
+  white-space: nowrap;
 }
 
-.logo span {
+.brand-prefix {
+  color: #00FF41;
+}
+
+.brand-suffix {
   color: #ffffff;
 }
 
@@ -357,6 +375,15 @@
 
   .user-info {
     gap: 8px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-text {
+    font-size: 16px;
   }
 }
 .notif-bell svg {

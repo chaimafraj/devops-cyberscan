@@ -454,6 +454,63 @@ body[data-theme='light'] .alertes-page {
   color: #0F172A !important;
 }
 
+body[data-theme='light'] .clients-container {
+  color: #374151 !important;
+}
+
+body[data-theme='light'] .clients-container h1 {
+  color: #374151 !important;
+  text-shadow: none !important;
+}
+
+body[data-theme='light'] .clients-container .btn-primary,
+body[data-theme='light'] .clients-container .pagination button {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #374151 !important;
+  box-shadow: none !important;
+}
+
+body[data-theme='light'] .clients-container .btn-primary:hover:not(:disabled),
+body[data-theme='light'] .clients-container .pagination button:hover:not(:disabled) {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  color: #111827 !important;
+}
+
+body[data-theme='light'] .clients-container .success,
+body[data-theme='light'] .clients-container .add-form {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #374151 !important;
+}
+
+body[data-theme='light'] .clients-container .add-form input {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #111827 !important;
+}
+
+body[data-theme='light'] .clients-container .clients-table th,
+body[data-theme='light'] .clients-container .clients-table td {
+  border-color: #cbd5e1 !important;
+}
+
+body[data-theme='light'] .clients-container .clients-table th {
+  background: #f8fafc !important;
+  color: #6b7280 !important;
+}
+
+body[data-theme='light'] .clients-container .badge-green {
+  background: #ffffff !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+}
+
+body[data-theme='light'] .clients-container .pagination span {
+  color: #374151 !important;
+}
+
 body[data-theme='light'] .navbar {
   background: var(--blue) !important;
   border-bottom-color: var(--cyan) !important;

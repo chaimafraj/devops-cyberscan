@@ -2,13 +2,8 @@
   max-width: 1100px;
   margin: 40px auto;
   padding: 20px;
-  color: #374151 !important;
+  color: #00ff41;
   font-family: monospace;
-}
-
-.clients-container h1 {
-  color: #374151 !important;
-  text-shadow: none !important;
 }
 
 .header-row {
@@ -20,9 +15,9 @@
 
 .btn-primary {
   padding: 10px 16px;
-  background: #ffffff !important;
-  border: 1px solid #9ca3af !important;
-  color: #374151 !important;
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   cursor: pointer;
   font-family: monospace;
 }
@@ -32,17 +27,10 @@
   cursor: not-allowed;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background: #f3f4f6 !important;
-  border-color: #6b7280 !important;
-  color: #111827 !important;
-  box-shadow: none !important;
-}
-
 .success {
-  color: #374151 !important;
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid #00ff41;
   padding: 10px;
   margin-bottom: 15px;
 }
@@ -56,8 +44,8 @@
 }
 
 .add-form {
-  background: #ffffff !important;
-  border: 1px solid #d1d5db !important;
+  background: rgba(0, 20, 0, 0.6);
+  border: 1px solid #00ff41;
   padding: 20px;
   margin-bottom: 25px;
   display: flex;
@@ -67,9 +55,9 @@
 
 .add-form input {
   padding: 8px;
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #111827 !important;
+  background: #001a00;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   margin-bottom: 10px;
 }
 
@@ -80,14 +68,13 @@
 
 .clients-table th,
 .clients-table td {
-  border: 1px solid #cbd5e1 !important;
+  border: 1px solid rgba(0, 255, 65, 0.3);
   padding: 10px;
   text-align: left;
 }
 
 .clients-table th {
-  background: #f8fafc !important;
-  color: #6b7280 !important;
+  background: rgba(0, 255, 65, 0.1);
 }
 
 .center {
@@ -101,9 +88,8 @@
 }
 
 .badge-green {
-  border-color: #9ca3af !important;
-  color: #374151 !important;
-  background: #ffffff !important;
+  border-color: #00ff41;
+  color: #00ff41;
 }
 
 .badge-red {
@@ -136,27 +122,16 @@
 
 .pagination button {
   padding: 8px 14px;
-  background: #ffffff !important;
-  border: 1px solid #cbd5e1 !important;
-  color: #6b7280 !important;
+  background: transparent;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   cursor: pointer;
   font-family: monospace;
-}
-
-.pagination span {
-  color: #374151 !important;
 }
 
 .pagination button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.pagination button:hover:not(:disabled) {
-  background: #f3f4f6 !important;
-  border-color: #9ca3af !important;
-  color: #111827 !important;
-  box-shadow: none !important;
 }
 
 .empty-msg,

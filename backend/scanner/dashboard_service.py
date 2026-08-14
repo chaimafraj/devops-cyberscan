@@ -1,4 +1,4 @@
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 
 from .access import visible_scans
 from .alert_service import alert_stats, build_alerts
@@ -12,12 +12,12 @@ def build_dashboard_payload(user):
     scans = visible_scans(user)
     aggregate = scans.aggregate(total=Count('id'), average=Avg('score_risque_ia'))
     status_counts = {item['status']: item['count'] for item in scans.values('status').annotate(count=Count('id'))}
-    scan_risk_counts = {
-        'critical': scans.filter(score_risque_ia__gte=9).count(),
-        'high': scans.filter(score_risque_ia__gte=7, score_risque_ia__lt=9).count(),
-        'medium': scans.filter(score_risque_ia__gte=4, score_risque_ia__lt=7).count(),
-        'low': scans.filter(score_risque_ia__lt=4).count(),
-    }
+    scan_risk_counts = scans.aggregate(
+        critical=Count('id', filter=Q(score_risque_ia__gte=9)),
+        high=Count('id', filter=Q(score_risque_ia__gte=7, score_risque_ia__lt=9)),
+        medium=Count('id', filter=Q(score_risque_ia__gte=4, score_risque_ia__lt=7)),
+        low=Count('id', filter=Q(score_risque_ia__lt=4)),
+    )
     completed = scan_alert_queryset(scans.filter(status=Scan.Status.COMPLETED)).order_by('-date_scan')
     vulnerabilities = alert_stats(build_alerts(list(completed)))
     recent = scan_summary_queryset(scans).order_by('-date_scan')[:5]

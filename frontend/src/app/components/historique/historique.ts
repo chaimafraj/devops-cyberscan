@@ -66,9 +66,18 @@ class Historique implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.isAdmin = this.authService.getUserRole() === 'admin';
-    this.displayedColumns = this.isAdmin
-      ? ['client', 'domaine', 'date', 'protocols', 'score', 'risk', 'statut', 'rapport', 'email', 'actions']
-      : ['domaine', 'date', 'protocols', 'score', 'risk', 'statut', 'rapport', 'email', 'actions'];
+    this.displayedColumns = [
+      'client',
+      'domaine',
+      'date',
+      'protocols',
+      'score',
+      'risk',
+      'statut',
+      'rapport',
+      'email',
+      'actions',
+    ];
     this.chatbotContext.clearScanContext();
     this.startMatrix();
     this.loadScans();
@@ -128,19 +137,34 @@ class Historique implements OnInit, OnDestroy {
   /** Enrichit un scan avec les champs d'interface PDF / email */
   private mapScanUi(s: any) {
     const pdfReady = !!(s.pdf_disponible ?? s.has_rapport);
+    const rawScore = Number(s.score_risque_ia ?? 0);
+    const score = Number.isFinite(rawScore) ? rawScore : 0;
     return {
       ...s,
-      riskClass: s.score_risque_ia >= 7 ? 'danger' : s.score_risque_ia >= 4 ? 'warn' : 'ok',
-      statut: s.score_risque_ia >= 7 ? 'ÉLEVÉ' : s.score_risque_ia >= 4 ? 'MOYEN' : 'FAIBLE',
+      client_nom: s.client_nom || '—',
+      protocols: Array.isArray(s.protocols) ? s.protocols : (s.resultats_ssl?.protocols ?? []),
+      score_risque_ia: score,
+      riskClass: score >= 7 ? 'danger' : score >= 4 ? 'warn' : 'ok',
+      statut: score >= 7 ? 'ÉLEVÉ' : score >= 4 ? 'MOYEN' : 'FAIBLE',
       // Statuts rapport : non_genere | generation | pret | erreur
       rapportStatus:
-        s.rapport_status ?? s.rapportStatus ?? (pdfReady ? 'pret' : 'non_genere'),
+        s.rapport_status ?? s.report_status ?? s.rapportStatus ?? (pdfReady ? 'pret' : 'non_genere'),
       // Statuts email : non_envoye | envoi | envoye | erreur
       emailStatus: s.email_status ?? s.emailStatus ?? 'non_envoye',
       pdfGenerating: false,
       pdfDownloading: false,
       emailSending: false,
     };
+  }
+
+  getProtocolSummary(scan: any): string {
+    const protocols = Array.isArray(scan?.protocols)
+      ? scan.protocols
+      : (scan?.resultats_ssl?.protocols ?? []);
+    const names = protocols
+      .map((protocol: any) => protocol?.name || protocol)
+      .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
+    return names.length ? names.join(', ') : 'Aucun';
   }
 
   getScanStatusLabel(status: unknown): string {

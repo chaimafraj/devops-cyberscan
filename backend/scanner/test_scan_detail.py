@@ -1,9 +1,11 @@
 from django.contrib.auth.models import User
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from .models import Notification, Rapport, RealtimeEvent, Scan, User
 
 
+@override_settings(ROOT_URLCONF="backend.urls")
 class ScanDetailApiTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="auditor", password="secret")
@@ -53,3 +55,43 @@ class ScanDetailApiTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "image/svg+xml")
         self.assertIn(b"<svg", response.content)
+
+
+@override_settings(ROOT_URLCONF="backend.urls")
+class ScanListApiTests(APITestCase):
+    def test_history_list_returns_lightweight_table_fields(self):
+        user = User.objects.create_user(
+            username="history-admin",
+            email="history-admin@example.com",
+            password="secret",
+            role="admin",
+        )
+        self.client.force_authenticate(user)
+        scan = Scan.objects.create(
+            domaine="table.example",
+            created_by=user,
+            status=Scan.Status.COMPLETED,
+            score_risque_ia=8.2,
+            resultats_ssl={
+                "protocols": [{"name": "TLSv1.2", "status": "secure"}],
+                "openssl": "raw output that should stay out of the list",
+            },
+        )
+        Rapport.objects.create(scan=scan, chemin_pdf="rapport.pdf")
+        Notification.objects.create(
+            scan=scan,
+            type="report_emailed",
+            niveau="success",
+            titre="Rapport envoye",
+            message="Rapport envoye.",
+        )
+
+        response = self.client.get("/api/scans/")
+
+        self.assertEqual(response.status_code, 200)
+        row = response.data["results"][0]
+        self.assertEqual(row["domaine"], "table.example")
+        self.assertEqual(row["protocols"], [{"name": "TLSv1.2", "status": "secure"}])
+        self.assertEqual(row["rapport_status"], "pret")
+        self.assertEqual(row["email_status"], "envoye")
+        self.assertNotIn("resultats_ssl", row)

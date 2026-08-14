@@ -14,7 +14,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import Scan, Client
 from .scan_cancellation import ScanCancelled
-from .serializers import ScanDetailSerializer, ScanSerializer
+from .scan_queries import scan_summary_queryset
+from .serializers import ScanDetailSerializer, ScanSerializer, ScanSummarySerializer
 from .ssh_scanner import (
     parse_target, run_nmap, run_nuclei, run_openssl, run_ssllabs,
     run_sslscan, run_whatweb, run_zap,
@@ -382,7 +383,7 @@ def scans_list(request):
         base_qs = Scan.objects.filter(client=client) if client else Scan.objects.none()
 
     if request.method == 'GET':
-        scans = base_qs.order_by('-date_scan')
+        scans = scan_summary_queryset(base_qs).order_by('-date_scan')
         search = request.GET.get('search', '')
         risk = request.GET.get('risk', '').upper()
 
@@ -411,7 +412,7 @@ def scans_list(request):
         start = (page - 1) * page_size
         end = start + page_size
 
-        serializer = ScanSerializer(scans[start:end], many=True)
+        serializer = ScanSummarySerializer(scans[start:end], many=True)
 
         return Response({
             'results': serializer.data,

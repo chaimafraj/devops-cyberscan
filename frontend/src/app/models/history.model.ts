@@ -11,7 +11,10 @@ export interface Scan {
   domaine: string;
   date_scan: string;
   score_risque_ia: number;
+  status?: string;
+  error_message?: string;
   client_nom?: string;
+  protocols?: ProtocolResult[];
   resultats_ssl?: ScanResults;
   whatweb?: { technologies?: Technology[] };
   cves?: Cve[];

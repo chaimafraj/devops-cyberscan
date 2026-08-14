@@ -46,6 +46,9 @@ class CVESerializer(serializers.ModelSerializer):
 class ScanSummarySerializer(serializers.ModelSerializer):
     client_nom = serializers.SerializerMethodField()
     cves_count = serializers.SerializerMethodField()
+    protocols = serializers.SerializerMethodField()
+    rapport_status = serializers.SerializerMethodField()
+    email_status = serializers.SerializerMethodField()
     manual_vulnerabilities_count = serializers.IntegerField(read_only=True, default=0)
     has_rapport = serializers.BooleanField(source='has_rapport_value', read_only=True, default=False)
     pdf_disponible = serializers.BooleanField(source='has_rapport_value', read_only=True, default=False)
@@ -54,8 +57,9 @@ class ScanSummarySerializer(serializers.ModelSerializer):
         model = Scan
         fields = [
             'id', 'domaine', 'date_scan', 'score_risque_ia', 'status',
-            'error_message', 'client_nom', 'cves_count',
+            'error_message', 'client_nom', 'protocols', 'cves_count',
             'manual_vulnerabilities_count', 'has_rapport', 'pdf_disponible',
+            'rapport_status', 'email_status',
         ]
 
     def get_client_nom(self, obj):
@@ -64,6 +68,34 @@ class ScanSummarySerializer(serializers.ModelSerializer):
     def get_cves_count(self, obj):
         results = obj.resultats_ssl if isinstance(obj.resultats_ssl, dict) else {}
         return len(collect_scan_cves(obj, results))
+
+    def get_protocols(self, obj):
+        results = obj.resultats_ssl if isinstance(obj.resultats_ssl, dict) else {}
+        protocols = results.get('protocols')
+        return protocols if isinstance(protocols, list) else []
+
+    def get_rapport_status(self, obj):
+        has_rapport = getattr(obj, 'has_rapport_value', None)
+        if has_rapport is None:
+            has_rapport = obj.rapports.exists()
+        return 'pret' if has_rapport else 'non_genere'
+
+    def get_email_status(self, obj):
+        email_sent = getattr(obj, 'email_sent_value', None)
+        email_failed = getattr(obj, 'email_failed_value', None)
+        if email_sent is not None or email_failed is not None:
+            if email_sent:
+                return 'envoye'
+            if email_failed:
+                return 'erreur'
+            return 'non_envoye'
+
+        notifications = obj.notifications
+        if notifications.filter(type='report_emailed').exists():
+            return 'envoye'
+        if notifications.filter(type='email_failed').exists():
+            return 'erreur'
+        return 'non_envoye'
 
 class ScanSerializer(serializers.ModelSerializer):
     cves = CVESerializer(many=True, read_only=True)

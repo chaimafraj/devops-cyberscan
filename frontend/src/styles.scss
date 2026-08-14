@@ -273,6 +273,33 @@ textarea:focus {
   font-size: 15px !important;
 }
 
+.scans-table {
+  overflow-x: auto;
+}
+
+.cyber-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.cyber-table .mat-mdc-cell,
+.cyber-table .mat-mdc-header-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cyber-table .mat-column-client { width: 8%; }
+.cyber-table .mat-column-domaine { width: 11%; }
+.cyber-table .mat-column-date { width: 10%; }
+.cyber-table .mat-column-protocols { width: 13%; }
+.cyber-table .mat-column-score { width: 7%; }
+.cyber-table .mat-column-risk { width: 12%; }
+.cyber-table .mat-column-statut { width: 8%; }
+.cyber-table .mat-column-rapport { width: 11%; }
+.cyber-table .mat-column-email { width: 8%; }
+.cyber-table .mat-column-actions { width: 12%; }
+
 .domain {
   font-size: 19px !important;
 }

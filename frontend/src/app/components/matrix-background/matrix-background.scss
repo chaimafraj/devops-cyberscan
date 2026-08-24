@@ -1,4 +1,93 @@
-:host { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-canvas { display: block; width: 100%; height: 100%; opacity: .12; }
-:host-context(body[data-theme="light"]) canvas { opacity: .04; }
-@media (prefers-reduced-motion: reduce) { :host { display: none; } }
+:host {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+:host-context(body[data-theme="light"]) {
+  display: block;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(0, 212, 255, 0.16), transparent 32%),
+    radial-gradient(circle at 82% 18%, rgba(37, 99, 235, 0.13), transparent 30%),
+    linear-gradient(180deg, #fbfdff 0%, #eef8fb 100%);
+}
+
+:host-context(body[data-theme="light"])::before,
+:host-context(body[data-theme="light"])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:host-context(body[data-theme="light"])::before {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 70px,
+      rgba(0, 212, 255, 0.10) 71px,
+      transparent 74px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 18px,
+      rgba(37, 99, 235, 0.05) 19px,
+      transparent 22px
+    );
+  opacity: 0.9;
+  animation: matrix-light-grid 18s linear infinite;
+}
+
+:host-context(body[data-theme="light"])::after {
+  height: 38%;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0, 212, 255, 0.20) 48%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, rgba(37, 99, 235, 0.13) 50%, transparent 100%);
+  opacity: 0.6;
+  transform: translateY(-120%);
+  animation: matrix-light-sweep 6.5s ease-in-out infinite;
+}
+
+canvas {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.2;
+  mix-blend-mode: multiply;
+}
+
+@keyframes matrix-light-grid {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 144px 0, 0 88px;
+  }
+}
+
+@keyframes matrix-light-sweep {
+  0%, 24% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+  42%, 58% {
+    opacity: 0.58;
+  }
+  84%, 100% {
+    transform: translateY(260%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    display: none;
+  }
+}

@@ -499,8 +499,8 @@ body[data-theme='light'] {
   --status-danger: #ff4444;
   --status-warn: #ffaa00;
   --status-info: #00d4ff;
-  --matrix-fade: rgba(255, 255, 255, 0.05);
-  --matrix-glyph: #0F172A;
+  --matrix-fade: rgba(255, 255, 255, 0.08);
+  --matrix-glyph: rgba(37, 99, 235, 0.62);
   --step-ok: #0F172A;
   --step-active: var(--cyan);
   --step-pending: rgba(15, 23, 42, 0.42);
@@ -523,9 +523,24 @@ body[data-theme='light'] .dashboard,
 body[data-theme='light'] .scanner-page,
 body[data-theme='light'] .historique-page,
 body[data-theme='light'] .alertes-page,
-body[data-theme='light'] .login-page {
-  background: var(--bg) !important;
+body[data-theme='light'] .login-page,
+body[data-theme='light'] .force-container {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(0, 212, 255, 0.10), transparent 34%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.82), rgba(238, 248, 251, 0.76)) !important;
   color: #0F172A !important;
+}
+
+body[data-theme='light'] .dashboard,
+body[data-theme='light'] .scanner-page,
+body[data-theme='light'] .historique-page,
+body[data-theme='light'] .alertes-page,
+body[data-theme='light'] .login-page,
+body[data-theme='light'] .force-container,
+body[data-theme='light'] .clients-container,
+body[data-theme='light'] .profile-container {
+  position: relative;
+  z-index: 1;
 }
 
 body[data-theme='light'] .clients-container {

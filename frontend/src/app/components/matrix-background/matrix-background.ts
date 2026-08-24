@@ -8,15 +8,46 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestro
 export class MatrixBackground implements AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: true }) private canvasRef!: ElementRef<HTMLCanvasElement>;
   private interval: ReturnType<typeof setInterval> | null = null;
+  private resizeListener: (() => void) | null = null;
+  private themeObserver: MutationObserver | null = null;
   ngAfterViewInit(): void {
     if (navigator.userAgent.toLowerCase().includes('jsdom')) return;
     if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    this.themeObserver = new MutationObserver(() => this.syncTheme());
+    this.themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+    this.syncTheme();
+  }
+
+  ngOnDestroy(): void {
+    this.stopMatrix();
+    this.themeObserver?.disconnect();
+  }
+
+  private syncTheme(): void {
+    if (document.body.getAttribute('data-theme') === 'light') {
+      this.startMatrix();
+      return;
+    }
+    this.stopMatrix();
+  }
+
+  private startMatrix(): void {
+    if (this.interval) return;
     const canvas = this.canvasRef.nativeElement;
     const context = canvas.getContext('2d');
     if (!context) return;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const drops = Array<number>(Math.floor(canvas.width / 14)).fill(1);
+
+    let drops: number[] = [];
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drops = Array<number>(Math.ceil(canvas.width / 14)).fill(1);
+    };
+
+    resizeCanvas();
+    this.resizeListener = resizeCanvas;
+    window.addEventListener('resize', resizeCanvas);
+
     this.interval = setInterval(() => {
       const styles = getComputedStyle(document.body);
       context.fillStyle = styles.getPropertyValue('--matrix-fade').trim();
@@ -30,6 +61,18 @@ export class MatrixBackground implements AfterViewInit, OnDestroy {
       });
     }, 50);
   }
-  ngOnDestroy(): void { if (this.interval) clearInterval(this.interval); }
+
+  private stopMatrix(): void {
+    if (!this.interval) return;
+    clearInterval(this.interval);
+    this.interval = null;
+    if (this.resizeListener) {
+      window.removeEventListener('resize', this.resizeListener);
+      this.resizeListener = null;
+    }
+    const canvas = this.canvasRef.nativeElement;
+    const context = canvas.getContext('2d');
+    context?.clearRect(0, 0, canvas.width, canvas.height);
+  }
 }
 

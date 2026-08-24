@@ -1,49 +1,89 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 286 72" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 312 78" role="img" aria-labelledby="title desc">
   <title id="title">CyberScan logo</title>
-  <desc id="desc">A neon security scan mark followed by the compact CyberScan wordmark.</desc>
+  <desc id="desc">CyberScan one-word logo with a shield scan mark, optimized for dark and light themes.</desc>
   <defs>
-    <linearGradient id="markGradient" x1="10" x2="70" y1="8" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#00f5ff" />
-      <stop offset="0.52" stop-color="#39ff6a" />
-      <stop offset="1" stop-color="#a7ff4f" />
+    <linearGradient id="shieldStroke" x1="15" x2="78" y1="8" y2="70" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="0.35" stop-color="#00b7ff" />
+      <stop offset="1" stop-color="#22ff72" />
     </linearGradient>
-    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="2.6" result="blur" />
+
+    <linearGradient id="shieldFill" x1="24" x2="62" y1="16" y2="61" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0a2740" />
+      <stop offset="1" stop-color="#03140d" />
+    </linearGradient>
+
+    <linearGradient id="wordGradient" x1="92" x2="286" y1="22" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="0.42" stop-color="#22ff72" />
+      <stop offset="1" stop-color="#00a7ff" />
+    </linearGradient>
+
+    <linearGradient id="scanLine" x1="92" x2="292" y1="58" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="0.14" stop-color="#22ff72" stop-opacity="0.8" />
+      <stop offset="0.72" stop-color="#00a7ff" stop-opacity="0.7" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <filter id="markGlow" x="-35%" y="-35%" width="170%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.8" result="blur" />
+      <feFlood flood-color="#00a7ff" flood-opacity="0.52" result="color" />
+      <feComposite in="color" in2="blur" operator="in" result="glow" />
       <feMerge>
-        <feMergeNode in="blur" />
+        <feMergeNode in="glow" />
         <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>
+
+    <filter id="wordDepth" x="-8%" y="-30%" width="118%" height="165%">
+      <feDropShadow dx="0" dy="1.2" stdDeviation="1" flood-color="#02110b" flood-opacity="0.9" />
+      <feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#00a7ff" flood-opacity="0.28" />
+    </filter>
   </defs>
 
-  <g filter="url(#softGlow)">
+  <g filter="url(#markGlow)">
     <path
-      d="M40 7 65 17v18c0 16.5-10.4 25.9-25 30-14.6-4.1-25-13.5-25-30V17L40 7Z"
-      fill="#071007"
-      stroke="url(#markGradient)"
-      stroke-width="4"
+      d="M43 7.5 70 18.3v19.2c0 17.3-11.1 27.4-27 32.1-15.9-4.7-27-14.8-27-32.1V18.3L43 7.5Z"
+      fill="url(#shieldFill)"
+      stroke="url(#shieldStroke)"
+      stroke-width="4.2"
       stroke-linejoin="round"
     />
     <path
-      d="M29 35c0-6.2 4.8-11 11.3-11 4.2 0 7.3 1.6 9.6 4.2"
+      d="M43 17.5 61 24.7v12.9c0 11.5-7.2 18.5-18 22.2-10.8-3.7-18-10.7-18-22.2V24.7l18-7.2Z"
       fill="none"
-      stroke="#39ff6a"
-      stroke-width="4"
-      stroke-linecap="round"
+      stroke="#ffffff"
+      stroke-width="1.25"
+      stroke-linejoin="round"
+      opacity="0.2"
     />
     <path
-      d="M52 39c-1.6 5.4-5.9 8.9-11.7 8.9-6.5 0-11.3-4.7-11.3-11"
+      d="M54 31.2c-2.7-3.5-6.4-5.4-11.1-5.4-7.4 0-13 5.4-13 12.5s5.6 12.5 13 12.5c5.5 0 9.8-3 12.2-8.2"
       fill="none"
-      stroke="#00f5ff"
-      stroke-width="4"
+      stroke="#22ff72"
+      stroke-width="4.5"
       stroke-linecap="round"
     />
-    <path d="M22 36h35" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity="0.9" />
-    <path d="M62 22h13M62 36h17M62 50h11" stroke="#39ff6a" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />
+    <path d="M23 38.2h41" stroke="#f8fffb" stroke-width="2.6" stroke-linecap="round" opacity="0.96" />
+    <path d="M68 25.5h12M68 38.2h17M68 51h12" stroke="#22ff72" stroke-width="2.4" stroke-linecap="round" opacity="0.92" />
+    <circle cx="43" cy="38.2" r="10.6" fill="none" stroke="#00a7ff" stroke-width="1.8" opacity="0.82" />
   </g>
 
-  <g font-family="Orbitron, Share Tech Mono, monospace" font-weight="800" letter-spacing="0">
-    <text x="90" y="46" font-size="31"><tspan fill="#39ff6a">CYBER</tspan><tspan fill="#ffffff">SCAN</tspan></text>
-  </g>
-  <path d="M91 56h170" stroke="#39ff6a" stroke-width="2" stroke-linecap="round" opacity="0.42" />
+  <text
+    x="94"
+    y="49"
+    fill="url(#wordGradient)"
+    stroke="#03110b"
+    stroke-width="1.15"
+    paint-order="stroke fill"
+    filter="url(#wordDepth)"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="35"
+    font-weight="900"
+    letter-spacing="0"
+  >CyberScan</text>
+
+  <path d="M94 60h198" stroke="url(#scanLine)" stroke-width="2.2" stroke-linecap="round" />
+  <path d="M288 31h7M288 39h12M288 47h8" stroke="#00a7ff" stroke-width="1.8" stroke-linecap="round" opacity="0.52" />
 </svg>

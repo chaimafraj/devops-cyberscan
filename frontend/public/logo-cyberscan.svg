@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 286 72" role="img" aria-labelledby="title desc">
   <title id="title">CyberScan logo</title>
-  <desc id="desc">A neon security scan mark followed by the CyberScan wordmark.</desc>
+  <desc id="desc">A neon security scan mark followed by the compact CyberScan wordmark.</desc>
   <defs>
     <linearGradient id="markGradient" x1="10" x2="70" y1="8" y2="64" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#00f5ff" />
@@ -42,9 +42,8 @@
     <path d="M62 22h13M62 36h17M62 50h11" stroke="#39ff6a" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />
   </g>
 
-  <g font-family="Orbitron, Share Tech Mono, monospace" font-weight="700" letter-spacing="2">
-    <text x="90" y="45" fill="#39ff6a" font-size="29">CYBER</text>
-    <text x="202" y="45" fill="#ffffff" font-size="29">SCAN</text>
+  <g font-family="Orbitron, Share Tech Mono, monospace" font-weight="800" letter-spacing="0">
+    <text x="90" y="46" font-size="31"><tspan fill="#39ff6a">CYBER</tspan><tspan fill="#ffffff">SCAN</tspan></text>
   </g>
-  <path d="M91 55h175" stroke="#39ff6a" stroke-width="2" stroke-linecap="round" opacity="0.42" />
+  <path d="M91 56h170" stroke="#39ff6a" stroke-width="2" stroke-linecap="round" opacity="0.42" />
 </svg>

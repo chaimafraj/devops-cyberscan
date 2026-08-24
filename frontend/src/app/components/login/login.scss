@@ -97,6 +97,58 @@
   z-index: 1;
 }
 
+body[data-theme='light'] .login-page {
+  background:
+    radial-gradient(circle at 50% 26%, rgba(0, 167, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, #eef8fb 100%) !important;
+}
+
+body[data-theme='light'] .login-page::before,
+body[data-theme='light'] .login-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+body[data-theme='light'] .login-page::before {
+  z-index: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 72px,
+      rgba(0, 167, 255, 0.08) 73px,
+      transparent 76px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 18px,
+      rgba(34, 255, 114, 0.04) 19px,
+      transparent 22px
+    );
+  opacity: 0.72;
+  animation: light-matrix-drift 18s linear infinite;
+}
+
+body[data-theme='light'] .login-page::after {
+  z-index: 1;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0, 167, 255, 0.16) 50%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, rgba(34, 255, 114, 0.12) 50%, transparent 100%);
+  height: 34%;
+  opacity: 0.55;
+  transform: translateY(-120%);
+  animation: light-scan-sweep 6.5s ease-in-out infinite;
+}
+
+body[data-theme='light'] .login-page #login-matrix {
+  opacity: 0.16 !important;
+  filter: hue-rotate(130deg) saturate(1.35) brightness(0.78) !important;
+  mix-blend-mode: multiply;
+}
+
 .login-box::before {
   content: '';
   position: absolute;

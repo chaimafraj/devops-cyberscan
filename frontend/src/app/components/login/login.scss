@@ -99,8 +99,8 @@
 
 body[data-theme='light'] .login-page {
   background:
-    radial-gradient(circle at 50% 26%, rgba(0, 167, 255, 0.14), transparent 34%),
-    linear-gradient(180deg, #f8fbff 0%, #eef8fb 100%) !important;
+    radial-gradient(circle at 50% 26%, rgba(0, 167, 255, 0.13), transparent 34%),
+    linear-gradient(180deg, rgba(248, 251, 255, 0.82) 0%, rgba(238, 248, 251, 0.76) 100%) !important;
 }
 
 body[data-theme='light'] .login-page::before,
